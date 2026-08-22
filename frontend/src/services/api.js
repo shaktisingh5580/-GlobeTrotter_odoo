@@ -46,7 +46,8 @@ async function request(path, options = {}) {
   
   if (response.status === 204) return null;
   
-  return response.json();
+  const json = await response.json();
+  return json.data !== undefined ? json.data : json;
 }
 
 export const api = {
