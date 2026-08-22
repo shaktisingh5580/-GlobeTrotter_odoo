@@ -42,6 +42,13 @@ export default function Home() {
     }
   }, []);
 
+  // Open auth modal automatically when ?login=1 is in the URL (from header Log In pill)
+  useEffect(() => {
+    if (router.query.login === '1' && !isLoggedIn) {
+      setIsAuthOpen(true);
+    }
+  }, [router.query.login, isLoggedIn]);
+
   const handleCreateTrip = (data) => {
     setCurrentTripDetails(data);
     setIsModalOpen(false);

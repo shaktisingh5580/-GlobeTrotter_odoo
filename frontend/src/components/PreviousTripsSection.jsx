@@ -19,34 +19,48 @@
 
 import React, { useRef, useState } from 'react';
 import Image from 'next/image';
+import {
+  varanasi_photo,
+  font_varanasi,
+  ladakh_nubra_valley,
+  font_ladakh,
+  manali_rohtang_pass,
+  font_manali,
+  shimla_toy_train,
+  font_shimla
+} from "@/assets";
 
 const PREVIOUS_TRIPS = [
   {
     id: 1,
-    destination: "Kyoto, Japan",
+    destination: "Varanasi, India",
     dates: "Oct 12 - Oct 18, 2025",
-    image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80",
+    image: varanasi_photo,
+    fontImage: font_varanasi,
     days: "6 Days"
   },
   {
     id: 2,
-    destination: "Amalfi Coast, Italy",
+    destination: "Ladakh, India",
     dates: "Jul 05 - Jul 14, 2025",
-    image: "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=600&q=80",
+    image: ladakh_nubra_valley,
+    fontImage: font_ladakh,
     days: "9 Days"
   },
   {
     id: 3,
-    destination: "Paris, France",
+    destination: "Manali, India",
     dates: "May 20 - May 25, 2025",
-    image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=600&q=80",
+    image: manali_rohtang_pass,
+    fontImage: font_manali,
     days: "5 Days"
   },
   {
     id: 4,
-    destination: "Reykjavik, Iceland",
+    destination: "Shimla, India",
     dates: "Jan 15 - Jan 22, 2025",
-    image: "https://images.unsplash.com/photo-1504829857797-ddff28127792?auto=format&fit=crop&w=600&q=80",
+    image: shimla_toy_train,
+    fontImage: font_shimla,
     days: "7 Days"
   }
 ];
@@ -145,7 +159,22 @@ const PreviousTripsSection = ({ onPlanTrip }) => {
                 />
                 
                 {/* Dark overlay gradient for readability */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+
+                {/* Typography Font Overlay */}
+                {trip.fontImage && (
+                  <div className="absolute inset-x-0 top-[15%] bottom-[35%] px-6 pointer-events-none">
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={trip.fontImage}
+                        alt={`${trip.destination} font`}
+                        fill
+                        className="object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.65)]"
+                        unoptimized
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Card content text at the bottom */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col gap-1 text-white pointer-events-none">

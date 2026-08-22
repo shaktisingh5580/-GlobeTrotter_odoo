@@ -24,43 +24,62 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import {
+  varanasi_photo,
+  font_varanasi,
+  ladakh_magnetic_hill,
+  ladakh_nubra_valley,
+  font_ladakh,
+  manali_hidimba_devi,
+  font_manali,
+  shimla_toy_train,
+  font_shimla,
+  udaipur_lake_pichola,
+  font_hawa_mahal
+} from "@/assets";
 
 const SUGGESTIONS = [
   {
     id: 1,
-    title: "Kyoto Golden Temple",
+    title: "Varanasi Ganga Aarti",
     category: "Sightseeing",
-    image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=400&q=80"
+    image: varanasi_photo,
+    fontImage: font_varanasi
   },
   {
     id: 2,
-    title: "Amalfi Coastal Walk",
+    title: "Ladakh Magnetic Hill",
     category: "Adventure",
-    image: "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=400&q=80"
+    image: ladakh_magnetic_hill,
+    fontImage: font_ladakh
   },
   {
     id: 3,
-    title: "Paris Seine River Cruise",
-    category: "Leisure",
-    image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80"
+    title: "Ladakh Nubra Valley",
+    category: "Sightseeing",
+    image: ladakh_nubra_valley,
+    fontImage: font_ladakh
   },
   {
     id: 4,
-    title: "Fjord Kayaking Adventure",
-    category: "Watersports",
-    image: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=400&q=80"
+    title: "Manali Hidimba Temple",
+    category: "Culture",
+    image: manali_hidimba_devi,
+    fontImage: font_manali
   },
   {
     id: 5,
-    title: "Icelandic Northern Lights",
-    category: "Nature",
-    image: "https://images.unsplash.com/photo-1504829857797-ddff28127792?auto=format&fit=crop&w=400&q=80"
+    title: "Shimla Toy Train",
+    category: "Adventure",
+    image: shimla_toy_train,
+    fontImage: font_shimla
   },
   {
     id: 6,
-    title: "Patagonia Glacier Hike",
-    category: "Trekking",
-    image: "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&w=400&q=80"
+    title: "Udaipur Lake Pichola",
+    category: "Leisure",
+    image: udaipur_lake_pichola,
+    fontImage: font_hawa_mahal
   }
 ];
 
@@ -223,8 +242,22 @@ const PlanTripModal = ({ isOpen, onClose, onCreateTrip }) => {
                       unoptimized
                     />
                     {/* Shadow overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent pointer-events-none" />
                     
+                    {/* Typography Font Overlay */}
+                    {sug.fontImage && (
+                      <div className="absolute inset-x-0 top-[15%] bottom-[30%] flex items-center justify-center px-4 pointer-events-none">
+                        <div className="relative w-full h-full flex items-center justify-center">
+                          <Image
+                            src={sug.fontImage}
+                            alt={`${sug.title} font`}
+                            className="object-contain max-h-full max-w-full drop-shadow-[0_4px_8px_rgba(0,0,0,0.65)]"
+                            unoptimized
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Suggestion text overlay */}
                     <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col gap-0.5 text-white">
                       <span className="text-[10px] text-sky-400 font-bold uppercase tracking-wider">

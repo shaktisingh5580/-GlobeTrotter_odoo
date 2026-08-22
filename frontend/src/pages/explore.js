@@ -16,89 +16,110 @@
 import React, { useState } from 'react';
 import Layout from './Layout/Layout';
 import SearchControlBar from '../components/SearchControlBar';
+import {
+  varanasi_photo,
+  font_varanasi,
+  ladakh_magnetic_hill,
+  ladakh_nubra_valley,
+  font_ladakh,
+  manali_hidimba_devi,
+  manali_rohtang_pass,
+  font_manali,
+  shimla_toy_train,
+  font_shimla,
+  udaipur_lake_pichola,
+  font_hawa_mahal
+} from "@/assets";
 
 const MOCK_RESULTS = [
   {
     id: 1,
-    title: "Tandem Paragliding Flight in Interlaken",
-    location: "Interlaken, Switzerland",
-    category: "Adventure",
+    title: "Ganga Aarti Ritual and Boat Ride",
+    location: "Varanasi, India",
+    category: "Sightseeing",
     rating: "4.9",
     reviews: "340",
-    price: "$180",
-    image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80",
-    description: "Soar over the stunning Swiss Alps and clear blue lakes of Interlaken with a certified professional pilot. Includes transport and gear."
+    price: "$45",
+    image: varanasi_photo,
+    fontImage: font_varanasi,
+    description: "Witness the magnificent spiritual fire offering ritual (Aarti) on the ghats of the Ganges River and enjoy a serene evening boat tour."
   },
   {
     id: 2,
-    title: "Lake Pokhara Paragliding Flight",
-    location: "Pokhara, Nepal",
-    category: "Sightseeing",
+    title: "Magnetic Hill Mystery Tour",
+    location: "Ladakh, India",
+    category: "Adventure",
     rating: "4.8",
     reviews: "215",
     price: "$95",
-    image: "https://images.unsplash.com/photo-1501555088652-021faa106b9b?auto=format&fit=crop&w=600&q=80",
-    description: "Take off from Sarangkot and enjoy magnificent views of the Annapurna mountain range and clear reflection views of Phewa Lake."
+    image: ladakh_magnetic_hill,
+    fontImage: font_ladakh,
+    description: "Experience the optical illusion where vehicles seem to defy gravity and roll uphill on the Leh-Kargil highway."
   },
   {
     id: 3,
-    title: "Skyline Paragliding Pokhara Adventure",
-    location: "Pokhara, Nepal",
-    category: "Extreme Sports",
+    title: "Nubra Valley Camel Safari",
+    location: "Ladakh, India",
+    category: "Sightseeing",
     rating: "4.9",
     reviews: "182",
     price: "$110",
-    image: "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&w=600&q=80",
-    description: "Experience thermaling with hawks while overlooking the Himalayan peaks in Pokhara's premier tandem tour."
+    image: ladakh_nubra_valley,
+    fontImage: font_ladakh,
+    description: "Ride the double-humped Bactrian camels across the cold desert dunes of Nubra Valley against the backdrop of snowy mountain peaks."
   },
   {
     id: 4,
-    title: "Queenstown Paragliding Flight from Gondola",
-    location: "Queenstown, New Zealand",
+    title: "Solang Valley Paragliding & Adventure",
+    location: "Manali, India",
     category: "Adventure",
     rating: "4.7",
     reviews: "95",
     price: "$150",
-    image: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=600&q=80",
-    description: "Launch from the top of the Skyline Gondola and glide smoothly over the beautiful Lake Wakatipu and Remarkables mountain range."
+    image: manali_rohtang_pass,
+    fontImage: font_manali,
+    description: "Glide high over the lush meadows and snow-covered slopes of Solang Valley with experienced tandem pilots in Manali."
   },
   {
     id: 5,
-    title: "Alpine Hiking & Wilderness Trek",
-    location: "Chamonix, France",
-    category: "Hiking",
+    title: "Hidimba Devi Historic Temple Walk",
+    location: "Manali, India",
+    category: "Culture",
     rating: "4.9",
     reviews: "410",
-    price: "$75",
-    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80",
-    description: "Walk the path of legends under the gaze of Mont Blanc. Scenic day hikes through alpine meadows and rocky peaks."
+    price: "$35",
+    image: manali_hidimba_devi,
+    fontImage: font_manali,
+    description: "Explore the ancient wooden pagoda temple built in 1553, surrounded by a thick cedar forest in the beautiful town of Manali."
   },
   {
     id: 6,
-    title: "Fjord Kayaking & Gorge Exploration",
-    location: "Lofoten, Norway",
-    category: "Water Sports",
+    title: "Kalka-Shimla Toy Train Ride",
+    location: "Shimla, India",
+    category: "Adventure",
     rating: "4.8",
     reviews: "167",
-    price: "$120",
-    image: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=600&q=80",
-    description: "Paddle through crystal-clear Arctic waters surrounded by dramatic towering mountains in Norway's pristine fjords."
+    price: "$60",
+    image: shimla_toy_train,
+    fontImage: font_shimla,
+    description: "Enjoy the breathtaking views of pine-covered hills and historic bridges on the UNESCO World Heritage toy train ride in Shimla."
   },
   {
     id: 7,
-    title: "Scuba Diving in Great Barrier Reef",
-    location: "Cairns, Australia",
-    category: "Marine Life",
+    title: "Lake Pichola Romantic Boat Cruise",
+    location: "Udaipur, India",
+    category: "Leisure",
     rating: "4.9",
     reviews: "680",
-    price: "$210",
-    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80",
-    description: "Explore the world's largest coral reef system. Swim alongside colorful tropical fish, sea turtles, and marine life."
+    price: "$80",
+    image: udaipur_lake_pichola,
+    fontImage: font_hawa_mahal,
+    description: "Cruise the placid waters of Lake Pichola at sunset, witnessing the majestic Lake Palace and City Palace lit up in Udaipur."
   }
 ];
 
 export default function ExplorePage() {
-  const [query, setQuery] = useState('Paragliding');
+  const [query, setQuery] = useState('');
   const [groupBy, setGroupBy] = useState('none');
   const [filterBy, setFilterBy] = useState('all');
   const [sortBy, setSortBy] = useState('default');
@@ -228,10 +249,27 @@ function ActivityRowCard({ item }) {
       {/* Thumbnail Image */}
       <div className="w-full sm:w-44 h-40 sm:h-32 relative rounded-xl overflow-hidden shrink-0 bg-zinc-100">
         <img 
-          src={item.image} 
+          src={item.image?.src || item.image} 
           alt={item.title} 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 pointer-events-none"
         />
+        
+        {/* Dark overlay for contrast */}
+        <div className="absolute inset-0 bg-black/15 group-hover:bg-black/25 transition-colors pointer-events-none" />
+
+        {/* Typography Font Overlay */}
+        {item.fontImage && (
+          <div className="absolute inset-0 flex items-center justify-center p-3 pointer-events-none">
+            <div className="relative w-[75%] h-[75%] flex items-center justify-center">
+              <img
+                src={item.fontImage?.src || item.fontImage}
+                alt={`${item.title} font`}
+                className="object-contain max-h-full max-w-full drop-shadow-[0_2px_6px_rgba(0,0,0,0.65)]"
+              />
+            </div>
+          </div>
+        )}
+
         <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-zinc-800 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">
           {item.category}
         </span>

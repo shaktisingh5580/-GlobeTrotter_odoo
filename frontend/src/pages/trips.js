@@ -17,6 +17,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../pages/Layout/Layout';
 import SearchControlBar from '../components/SearchControlBar';
+import CalendarView from '../components/CalendarView';
 import api from '../services/api';
 
 export default function Trips() {
@@ -24,6 +25,7 @@ export default function Trips() {
   const [user, setUser] = useState(null);
   const [trips, setTrips] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeView, setActiveView] = useState('list'); // 'list' | 'calendar'
   
   // Selection states
   const [groupBy, setGroupBy] = useState('none');
@@ -127,6 +129,8 @@ export default function Trips() {
   const upcomingTrips = processedTrips.filter(t => getTripStatus(t.start_date, t.end_date) === 'upcoming');
   const completedTrips = processedTrips.filter(t => getTripStatus(t.start_date, t.end_date) === 'completed');
 
+  const userId = user?.id || 'me';
+
   return (
     <Layout>
       <div className="w-full bg-white min-h-screen pt-24 pb-16">
@@ -136,12 +140,18 @@ export default function Trips() {
           {user && (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-6">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full border border-zinc-200 overflow-hidden shrink-0 shadow-sm">
-                  <img 
-                    src={user.photo || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80"} 
-                    alt={user.username}
-                    className="w-full h-full object-cover pointer-events-none"
-                  />
+                <div className="w-16 h-16 rounded-full border border-zinc-200 overflow-hidden shrink-0 shadow-sm bg-zinc-100 flex items-center justify-center">
+                  {user.photo ? (
+                    <img 
+                      src={user.photo}
+                      alt={user.username}
+                      className="w-full h-full object-cover pointer-events-none"
+                    />
+                  ) : (
+                    <span className="text-2xl font-bold text-zinc-400">
+                      {(user.username || 'U')[0].toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 <div>
                   <h1 className="text-xl sm:text-2xl font-serif font-normal text-zinc-950">
@@ -163,15 +173,52 @@ export default function Trips() {
             </div>
           )}
 
-          {/* Search & Control Filter Bar */}
-          <SearchControlBar 
-            onSearch={(query) => setSearchQuery(query)}
-            onGroup={(val) => setGroupBy(val)}
-            onFilter={(val) => setFilterBy(val)}
-            onSort={(val) => setSortBy(val)}
-          />
+          {/* View Toggle + Search Controls */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {/* List / Calendar Toggle */}
+            <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl shrink-0">
+              <button
+                onClick={() => setActiveView('list')}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  activeView === 'list'
+                    ? 'bg-white text-zinc-900 shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-800'
+                }`}
+              >
+                ☰ List
+              </button>
+              <button
+                onClick={() => setActiveView('calendar')}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                  activeView === 'calendar'
+                    ? 'bg-white text-zinc-900 shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-800'
+                }`}
+              >
+                📅 Calendar
+              </button>
+            </div>
 
-          {/* Trips Groups Layout */}
+            {/* Only show search/sort/filter in list view */}
+            {activeView === 'list' && (
+              <div className="flex-grow w-full">
+                <SearchControlBar 
+                  onSearch={(query) => setSearchQuery(query)}
+                  onGroup={(val) => setGroupBy(val)}
+                  onFilter={(val) => setFilterBy(val)}
+                  onSort={(val) => setSortBy(val)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* ── Calendar View ── */}
+          {activeView === 'calendar' && (
+            <CalendarView trips={processedTrips} userId={userId} />
+          )}
+
+          {/* ── List View ── */}
+          {activeView === 'list' && (
           <div className="flex flex-col gap-10 mt-2">
             
             {groupBy === 'none' ? (
@@ -244,6 +291,7 @@ export default function Trips() {
             )}
 
           </div>
+          )}
 
         </div>
       </div>

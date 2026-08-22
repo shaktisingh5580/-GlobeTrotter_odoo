@@ -22,37 +22,57 @@
 
 import React from 'react';
 import Image from 'next/image';
+import {
+  varanasi_photo,
+  font_varanasi,
+  ladakh_magnetic_hill,
+  ladakh_nubra_valley,
+  font_ladakh,
+  manali_hidimba_devi,
+  font_manali,
+  shimla_ridge_mall,
+  font_shimla,
+  udaipur_lake_pichola,
+  udaipur_hawa_mahal,
+  font_hawa_mahal
+} from "@/assets";
 
 const REGIONAL_SELECTIONS = [
   {
     id: 1,
-    title: "Mediterranean Bliss",
-    image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80"
+    title: "Varanasi",
+    image: varanasi_photo,
+    fontImage: font_varanasi
   },
   {
     id: 2,
-    title: "Alpine Trails",
-    image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80"
+    title: "Ladakh",
+    image: ladakh_magnetic_hill,
+    fontImage: font_ladakh
   },
   {
     id: 3,
-    title: "Tropical Waters",
-    image: "https://images.unsplash.com/photo-1501555088652-021faa106b9b?auto=format&fit=crop&w=600&q=80"
+    title: "Manali",
+    image: manali_hidimba_devi,
+    fontImage: font_manali
   },
   {
     id: 4,
-    title: "River Kayaking",
-    image: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=600&q=80"
+    title: "Shimla",
+    image: shimla_ridge_mall,
+    fontImage: font_shimla
   },
   {
     id: 5,
-    title: "Coastal Breeze",
-    image: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=600&q=80"
+    title: "Udaipur",
+    image: udaipur_lake_pichola,
+    fontImage: font_hawa_mahal
   },
   {
     id: 6,
-    title: "Mountain Peaks",
-    image: "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?auto=format&fit=crop&w=600&q=80"
+    title: "Hawa Mahal",
+    image: udaipur_hawa_mahal,
+    fontImage: font_hawa_mahal
   }
 ];
 
@@ -61,6 +81,7 @@ const LOOPED_SELECTIONS = [
   ...REGIONAL_SELECTIONS,
   ...REGIONAL_SELECTIONS
 ];
+
 
 const AdventureGallery = () => {
   return (
@@ -113,7 +134,7 @@ const AdventureGallery = () => {
               return (
                 <div
                   key={`${adv.id}-${index}`}
-                  className={`w-[160px] sm:w-[220px] aspect-square shrink-0 relative rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden shadow-md bg-zinc-200 transition-all duration-300 hover:scale-[1.05] ${staggeredClass}`}
+                  className={`w-[160px] sm:w-[220px] aspect-square shrink-0 relative rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden shadow-md bg-zinc-200 transition-all duration-300 hover:scale-[1.05] ${staggeredClass} group`}
                 >
                   <Image
                     src={adv.image}
@@ -123,6 +144,23 @@ const AdventureGallery = () => {
                     priority
                     unoptimized
                   />
+                  {/* Subtle dark overlay for contrast */}
+                  <div className="absolute inset-0 bg-black/15 group-hover:bg-black/25 transition-colors pointer-events-none" />
+
+                  {/* Typography Font Overlay */}
+                  {adv.fontImage && (
+                    <div className="absolute inset-0 flex items-center justify-center p-3 sm:p-5 pointer-events-none">
+                      <div className="relative w-full h-[60%]">
+                        <Image
+                          src={adv.fontImage}
+                          alt={`${adv.title} font`}
+                          fill
+                          className="object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]"
+                          unoptimized
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
