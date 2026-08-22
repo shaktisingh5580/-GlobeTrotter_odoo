@@ -1,0 +1,583 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum Role {
+  USER  @map("user")
+  ADMIN @map("admin")
+
+  @@map("user_role")
+}
+
+enum TripStatus {
+  DRAFT     @map("draft")
+  PLANNED   @map("planned")
+  ONGOING   @map("ongoing")
+  COMPLETED @map("completed")
+
+  @@map("trip_status")
+}
+
+enum SectionType {
+  TRAVEL    @map("travel")
+  STAY      @map("stay")
+  ACTIVITY  @map("activity")
+  FOOD      @map("food")
+  TRANSPORT @map("transport")
+  CUSTOM    @map("custom")
+
+  @@map("section_type")
+}
+
+enum ActivityCategory {
+  SIGHTSEEING @map("sightseeing")
+  FOOD        @map("food")
+  ADVENTURE   @map("adventure")
+  CULTURE     @map("culture")
+  NIGHTLIFE   @map("nightlife")
+  SHOPPING    @map("shopping")
+  NATURE      @map("nature")
+  OTHER       @map("other")
+
+  @@map("activity_category")
+}
+
+enum ExpenseCategory {
+  TRANSPORT   @map("transport")
+  STAY        @map("stay")
+  ACTIVITIES  @map("activities")
+  MEALS       @map("meals")
+  OTHER       @map("other")
+
+  @@map("expense_category")
+}
+
+enum ShareVisibility {
+  PUBLIC    @map("public")
+  LINK_ONLY @map("link_only")
+
+  @@map("share_visibility")
+}
+
+enum PostVisibility {
+  PUBLIC  @map("public")
+  PRIVATE @map("private")
+  FRIENDS @map("friends")
+
+  @@map("post_visibility")
+}
+
+enum ReactionType {
+  LIKE    @map("like")
+  LOVE    @map("love")
+  INSPIRE @map("inspire")
+  HELPFUL @map("helpful")
+
+  @@map("reaction_type")
+}
+
+// -----------------------------------------------------------------------------
+// MODELS (20 Tables)
+// -----------------------------------------------------------------------------
+
+/// Table 1: media_files - Centralized file storage metadata
+model MediaFile {
+  id                String    @id @default(uuid()) @db.Uuid
+  owner_user_id     String    @db.Uuid
+  storage_key       String    @unique
+  original_filename String    @db.VarChar(255)
+  mime_type         String    @db.VarChar(100)
+  file_size         BigInt
+  checksum          String?   @db.VarChar(64)
+  created_at        DateTime  @default(now()) @db.Timestamptz()
+  deleted_at        DateTime? @db.Timestamptz()
+
+  // Relations
+  owner             User      @relation("UserUploadedFiles", fields: [owner_user_id], references: [id], onDelete: Cascade)
+  avatar_users      User[]    @relation("UserAvatar")
+  cover_trips       Trip[]    @relation("TripCover")
+  community_media   CommunityPostMedia[]
+
+  @@index([owner_user_id], name: "idx_media_files_owner")
+  @@index([storage_key], name: "idx_media_files_storage_key")
+  @@map("media_files")
+}
+
+/// Table 2: users - Core user accounts
+model User {
+  id                String    @id @default(uuid()) @db.Uuid
+  email             String    @unique @db.VarChar(255)
+  password_hash     String    @db.VarChar(255)
+  first_name        String    @db.VarChar(100)
+  last_name         String    @db.VarChar(100)
+  bio               String?   @db.Text
+  phone             String?   @db.VarChar(20)
+  city              String?   @db.VarChar(100)
+  country           String?   @db.VarChar(100)
+  avatar_file_id    String?   @db.Uuid
+  language          String    @default("en") @db.VarChar(10)
+  role              Role      @default(USER)
+  email_verified    Boolean   @default(false)
+  email_verified_at DateTime? @db.Timestamptz()
+  created_at        DateTime  @default(now()) @db.Timestamptz()
+  updated_at        DateTime  @default(now()) @updatedAt @db.Timestamptz()
+  deleted_at        DateTime? @db.Timestamptz()
+
+  // Relations
+  avatar_file       MediaFile? @relation("UserAvatar", fields: [avatar_file_id], references: [id], onDelete: SetNull)
+  uploaded_files    MediaFile[] @relation("UserUploadedFiles")
+  trips             Trip[]
+  saved_destinations SavedDestination[]
+  community_posts   CommunityPost[]
+  community_comments CommunityComment[]
+  community_reactions CommunityReaction[]
+  refresh_sessions  RefreshSession[]
+  password_reset_tokens PasswordResetToken[]
+  email_verification_tokens EmailVerificationToken[]
+  analytics_events  AnalyticsEvent[]
+  audit_logs        AuditLog[]
+
+  @@index([email], name: "idx_users_email")
+  @@index([role], name: "idx_users_role")
+  @@map("users")
+}
+
+/// Table 3: trips - User trips
+model Trip {
+  id                  String     @id @default(uuid()) @db.Uuid
+  user_id             String     @db.Uuid
+  title               String     @db.VarChar(200)
+  description         String?    @db.Text
+  start_date          DateTime   @db.Date
+  end_date            DateTime   @db.Date
+  budget_limit        Decimal?   @db.Decimal(12, 2)
+  currency            String     @default("INR") @db.VarChar(3)
+  cover_file_id       String?    @db.Uuid
+  status              TripStatus @default(DRAFT)
+  copied_from_trip_id String?    @db.Uuid
+  created_at          DateTime   @default(now()) @db.Timestamptz()
+  updated_at          DateTime   @default(now()) @updatedAt @db.Timestamptz()
+  deleted_at          DateTime?  @db.Timestamptz()
+
+  // Relations
+  user                User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  cover_file          MediaFile? @relation("TripCover", fields: [cover_file_id], references: [id], onDelete: SetNull)
+  copied_from_trip    Trip?      @relation("TripCopies", fields: [copied_from_trip_id], references: [id], onDelete: SetNull)
+  copied_trips        Trip[]     @relation("TripCopies")
+  stops               TripStop[]
+  sections            TripSection[]
+  expenses            Expense[]
+  shared_trips        SharedTrip[]
+  community_posts     CommunityPost[]
+
+  @@index([user_id], name: "idx_trips_user_id")
+  @@index([status], name: "idx_trips_status")
+  @@index([start_date], name: "idx_trips_start_date")
+  @@index([deleted_at], name: "idx_trips_deleted_at")
+  @@map("trips")
+}
+
+/// Table 4: destinations - Master reference destinations
+model Destination {
+  id               String     @id @default(uuid()) @db.Uuid
+  name             String     @db.VarChar(200)
+  country          String     @db.VarChar(100)
+  country_code     String?    @db.VarChar(3)
+  region           String?    @db.VarChar(100)
+  latitude         Decimal?   @db.Decimal(10, 7)
+  longitude        Decimal?   @db.Decimal(10, 7)
+  timezone         String?    @db.VarChar(50)
+  description      String?    @db.Text
+  image_url        String?    @db.Text
+  cost_index       Int?
+  popularity_score Int        @default(0)
+  created_at       DateTime   @default(now()) @db.Timestamptz()
+  updated_at       DateTime   @default(now()) @updatedAt @db.Timestamptz()
+
+  // Relations
+  trip_stops       TripStop[]
+  activities       Activity[]
+  saved_destinations SavedDestination[]
+  community_posts  CommunityPost[]
+
+  @@index([country], name: "idx_destinations_country")
+  @@index([name], name: "idx_destinations_name")
+  @@index([region], name: "idx_destinations_region")
+  @@map("destinations")
+}
+
+/// Table 5: trip_stops - Intermediate destinations/stops for a trip
+model TripStop {
+  id              String      @id @default(uuid()) @db.Uuid
+  trip_id         String      @db.Uuid
+  destination_id  String      @db.Uuid
+  stop_order      Int
+  arrival_date    DateTime    @db.Date
+  departure_date  DateTime    @db.Date
+  notes           String?     @db.Text
+  created_at      DateTime    @default(now()) @db.Timestamptz()
+  updated_at      DateTime    @default(now()) @updatedAt @db.Timestamptz()
+
+  // Relations
+  trip            Trip        @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  destination     Destination @relation(fields: [destination_id], references: [id], onDelete: Restrict)
+  sections        TripSection[]
+  itinerary_items ItineraryItem[]
+  expenses        Expense[]
+
+  @@unique([trip_id, stop_order], name: "uq_trip_stop_order")
+  @@index([trip_id], name: "idx_trip_stops_trip_id")
+  @@index([destination_id], name: "idx_trip_stops_destination_id")
+  @@map("trip_stops")
+}
+
+/// Table 6: trip_sections - User-defined itinerary blocks (stay, travel, activity) with budgets
+model TripSection {
+  id              String      @id @default(uuid()) @db.Uuid
+  trip_id         String      @db.Uuid
+  trip_stop_id    String?     @db.Uuid
+  title           String      @db.VarChar(200)
+  description     String?     @db.Text
+  section_type    SectionType
+  start_date      DateTime    @db.Date
+  end_date        DateTime    @db.Date
+  planned_budget  Decimal?    @db.Decimal(12, 2)
+  currency        String      @default("INR") @db.VarChar(3)
+  section_order   Int
+  created_at      DateTime    @default(now()) @db.Timestamptz()
+  updated_at      DateTime    @default(now()) @updatedAt @db.Timestamptz()
+  deleted_at      DateTime?   @db.Timestamptz()
+
+  // Relations
+  trip            Trip        @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  trip_stop       TripStop?   @relation(fields: [trip_stop_id], references: [id], onDelete: SetNull)
+  itinerary_items ItineraryItem[]
+  expenses        Expense[]
+
+  @@unique([trip_id, section_order], name: "uq_trip_section_order")
+  @@index([trip_id], name: "idx_trip_sections_trip_id")
+  @@index([trip_stop_id], name: "idx_trip_sections_trip_stop_id")
+  @@index([section_type], name: "idx_trip_sections_type")
+  @@map("trip_sections")
+}
+
+/// Table 7: activities - Master reference activities for destinations
+model Activity {
+  id               String            @id @default(uuid()) @db.Uuid
+  destination_id   String            @db.Uuid
+  name             String            @db.VarChar(300)
+  description      String?           @db.Text
+  category         ActivityCategory?
+  estimated_cost   Decimal?          @db.Decimal(10, 2)
+  currency         String            @default("INR") @db.VarChar(3)
+  duration_minutes Int?
+  image_url        String?           @db.Text
+  rating           Decimal?          @db.Decimal(2, 1)
+  created_at       DateTime          @default(now()) @db.Timestamptz()
+  updated_at       DateTime          @default(now()) @updatedAt @db.Timestamptz()
+
+  // Relations
+  destination      Destination       @relation(fields: [destination_id], references: [id], onDelete: Cascade)
+  itinerary_items  ItineraryItem[]
+  community_posts  CommunityPost[]
+
+  @@index([destination_id], name: "idx_activities_destination_id")
+  @@index([category], name: "idx_activities_category")
+  @@map("activities")
+}
+
+/// Table 8: itinerary_items - Daily activity schedule items
+model ItineraryItem {
+  id                 String       @id @default(uuid()) @db.Uuid
+  trip_stop_id       String       @db.Uuid
+  trip_section_id    String?      @db.Uuid
+  activity_id        String?      @db.Uuid
+  item_date          DateTime     @db.Date
+  start_time         String?      @db.VarChar(10)
+  end_time           String?      @db.VarChar(10)
+  item_order         Int
+  custom_title       String?      @db.VarChar(300)
+  custom_description String?      @db.Text
+  notes              String?      @db.Text
+  created_at         DateTime     @default(now()) @db.Timestamptz()
+  updated_at         DateTime     @default(now()) @updatedAt @db.Timestamptz()
+
+  // Relations
+  trip_stop          TripStop     @relation(fields: [trip_stop_id], references: [id], onDelete: Cascade)
+  trip_section       TripSection? @relation(fields: [trip_section_id], references: [id], onDelete: SetNull)
+  activity           Activity?    @relation(fields: [activity_id], references: [id], onDelete: SetNull)
+  expenses           Expense[]
+
+  @@unique([trip_stop_id, item_date, item_order], name: "uq_stop_date_order")
+  @@index([trip_stop_id], name: "idx_itinerary_items_trip_stop_id")
+  @@index([trip_section_id], name: "idx_itinerary_items_trip_section_id")
+  @@index([item_date], name: "idx_itinerary_items_date")
+  @@index([activity_id], name: "idx_itinerary_items_activity_id")
+  @@map("itinerary_items")
+}
+
+/// Table 9: expenses - Financial transactions for trips
+model Expense {
+  id                String          @id @default(uuid()) @db.Uuid
+  trip_id           String          @db.Uuid
+  trip_stop_id      String?         @db.Uuid
+  trip_section_id   String?         @db.Uuid
+  itinerary_item_id String?         @db.Uuid
+  title             String          @db.VarChar(200)
+  amount            Decimal         @db.Decimal(12, 2)
+  currency          String          @default("INR") @db.VarChar(3)
+  category          ExpenseCategory
+  expense_date      DateTime        @db.Date
+  notes             String?         @db.Text
+  created_at        DateTime        @default(now()) @db.Timestamptz()
+  updated_at        DateTime        @default(now()) @updatedAt @db.Timestamptz()
+
+  // Relations
+  trip              Trip            @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+  trip_stop         TripStop?       @relation(fields: [trip_stop_id], references: [id], onDelete: SetNull)
+  trip_section      TripSection?    @relation(fields: [trip_section_id], references: [id], onDelete: SetNull)
+  itinerary_item    ItineraryItem?  @relation(fields: [itinerary_item_id], references: [id], onDelete: SetNull)
+
+  @@index([trip_id], name: "idx_expenses_trip_id")
+  @@index([trip_section_id], name: "idx_expenses_trip_section_id")
+  @@index([category], name: "idx_expenses_category")
+  @@index([expense_date], name: "idx_expenses_date")
+  @@map("expenses")
+}
+
+/// Table 10: shared_trips - Public and link-shared trip tokens
+model SharedTrip {
+  id          String          @id @default(uuid()) @db.Uuid
+  trip_id     String          @db.Uuid
+  share_token String          @unique @db.VarChar(16)
+  is_active   Boolean         @default(true)
+  visibility  ShareVisibility @default(LINK_ONLY)
+  expires_at  DateTime?       @db.Timestamptz()
+  created_at  DateTime        @default(now()) @db.Timestamptz()
+
+  // Relations
+  trip        Trip            @relation(fields: [trip_id], references: [id], onDelete: Cascade)
+
+  @@index([share_token], name: "idx_shared_trips_share_token")
+  @@index([trip_id], name: "idx_shared_trips_trip_id")
+  @@map("shared_trips")
+}
+
+/// Table 11: saved_destinations - User bookmarked destinations
+model SavedDestination {
+  id             String      @id @default(uuid()) @db.Uuid
+  user_id        String      @db.Uuid
+  destination_id String      @db.Uuid
+  notes          String?     @db.Text
+  created_at     DateTime    @default(now()) @db.Timestamptz()
+
+  // Relations
+  user           User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  destination    Destination @relation(fields: [destination_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, destination_id], name: "uq_user_dest")
+  @@index([user_id], name: "idx_saved_destinations_user_id")
+  @@map("saved_destinations")
+}
+
+/// Table 12: community_posts - Community experience posts
+model CommunityPost {
+  id             String         @id @default(uuid()) @db.Uuid
+  user_id        String         @db.Uuid
+  trip_id        String?        @db.Uuid
+  destination_id String?        @db.Uuid
+  activity_id    String?        @db.Uuid
+  title          String         @db.VarChar(300)
+  content        String         @db.Text
+  visibility     PostVisibility @default(PUBLIC)
+  created_at     DateTime       @default(now()) @db.Timestamptz()
+  updated_at     DateTime       @default(now()) @updatedAt @db.Timestamptz()
+  deleted_at     DateTime?      @db.Timestamptz()
+
+  // Relations
+  user           User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  trip           Trip?          @relation(fields: [trip_id], references: [id], onDelete: SetNull)
+  destination    Destination?   @relation(fields: [destination_id], references: [id], onDelete: SetNull)
+  activity       Activity?      @relation(fields: [activity_id], references: [id], onDelete: SetNull)
+  comments       CommunityComment[]
+  reactions      CommunityReaction[]
+  media          CommunityPostMedia[]
+
+  @@index([user_id], name: "idx_community_posts_user_id")
+  @@index([trip_id], name: "idx_community_posts_trip_id")
+  @@index([destination_id], name: "idx_community_posts_destination_id")
+  @@index([created_at], name: "idx_community_posts_created_at")
+  @@map("community_posts")
+}
+
+/// Table 13: community_comments - Threaded comments on community posts
+model CommunityComment {
+  id                String             @id @default(uuid()) @db.Uuid
+  post_id           String             @db.Uuid
+  user_id           String             @db.Uuid
+  parent_comment_id String?            @db.Uuid
+  content           String             @db.Text
+  created_at        DateTime           @default(now()) @db.Timestamptz()
+  updated_at        DateTime           @default(now()) @updatedAt @db.Timestamptz()
+  deleted_at        DateTime?          @db.Timestamptz()
+
+  // Relations
+  post              CommunityPost      @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user              User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  parent_comment    CommunityComment?  @relation("CommentReplies", fields: [parent_comment_id], references: [id], onDelete: Cascade)
+  replies           CommunityComment[] @relation("CommentReplies")
+
+  @@index([post_id], name: "idx_community_comments_post_id")
+  @@index([user_id], name: "idx_community_comments_user_id")
+  @@index([parent_comment_id], name: "idx_community_comments_parent")
+  @@map("community_comments")
+}
+
+/// Table 14: community_reactions - Likes and reactions on community posts
+model CommunityReaction {
+  id            String        @id @default(uuid()) @db.Uuid
+  post_id       String        @db.Uuid
+  user_id       String        @db.Uuid
+  reaction_type ReactionType  @default(LIKE)
+  created_at    DateTime      @default(now()) @db.Timestamptz()
+
+  // Relations
+  post          CommunityPost @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([post_id, user_id], name: "uq_post_user_reaction")
+  @@index([post_id], name: "idx_community_reactions_post_id")
+  @@index([user_id], name: "idx_community_reactions_user_id")
+  @@map("community_reactions")
+}
+
+/// Table 15: community_post_media - Ordered media attachments for community posts
+model CommunityPostMedia {
+  id            String        @id @default(uuid()) @db.Uuid
+  post_id       String        @db.Uuid
+  media_file_id String        @db.Uuid
+  display_order Int
+  created_at    DateTime      @default(now()) @db.Timestamptz()
+
+  // Relations
+  post          CommunityPost @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  media_file    MediaFile     @relation(fields: [media_file_id], references: [id], onDelete: Cascade)
+
+  @@unique([post_id, display_order], name: "uq_post_media_order")
+  @@index([post_id], name: "idx_community_post_media_post_id")
+  @@map("community_post_media")
+}
+
+/// Table 16: refresh_sessions - Refresh tokens with family reuse detection
+model RefreshSession {
+  id                 String           @id @default(uuid()) @db.Uuid
+  user_id            String           @db.Uuid
+  token_hash         String           @unique @db.VarChar(255)
+  family_id          String           @db.Uuid
+  device_info        String?          @db.VarChar(255)
+  ip_address         String?          @db.VarChar(45)
+  expires_at         DateTime         @db.Timestamptz()
+  revoked_at         DateTime?        @db.Timestamptz()
+  replaced_by        String?          @db.Uuid
+  created_at         DateTime         @default(now()) @db.Timestamptz()
+  last_used_at       DateTime         @default(now()) @db.Timestamptz()
+
+  // Relations
+  user               User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  replaced_session   RefreshSession?  @relation("SessionReplacement", fields: [replaced_by], references: [id], onDelete: SetNull)
+  preceding_sessions RefreshSession[] @relation("SessionReplacement")
+
+  @@index([user_id], name: "idx_refresh_sessions_user_id")
+  @@index([token_hash], name: "idx_refresh_sessions_token_hash")
+  @@index([family_id], name: "idx_refresh_sessions_family_id")
+  @@map("refresh_sessions")
+}
+
+/// Table 17: password_reset_tokens - Secure password reset tokens
+model PasswordResetToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  token_hash String   @unique @db.VarChar(255)
+  expires_at DateTime @db.Timestamptz()
+  is_used    Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz()
+
+  // Relations
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id], name: "idx_prt_user_id")
+  @@index([token_hash], name: "idx_prt_token_hash")
+  @@map("password_reset_tokens")
+}
+
+/// Table 18: email_verification_tokens - Email confirmation tokens
+model EmailVerificationToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  token_hash String   @unique @db.VarChar(255)
+  expires_at DateTime @db.Timestamptz()
+  is_used    Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamptz()
+
+  // Relations
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id], name: "idx_evt_user_id")
+  @@index([token_hash], name: "idx_evt_token_hash")
+  @@map("email_verification_tokens")
+}
+
+/// Table 19: analytics_events - User behavioral telemetry for trends
+model AnalyticsEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String?  @db.Uuid
+  event_type  String   @db.VarChar(50)
+  entity_type String?  @db.VarChar(50)
+  entity_id   String?  @db.Uuid
+  metadata    Json?
+  created_at  DateTime @default(now()) @db.Timestamptz()
+
+  // Relations
+  user        User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([event_type], name: "idx_analytics_event_type")
+  @@index([entity_type, entity_id], name: "idx_analytics_entity")
+  @@index([created_at], name: "idx_analytics_created_at")
+  @@index([user_id], name: "idx_analytics_user_id")
+  @@map("analytics_events")
+}
+
+/// Table 20: audit_logs - Append-only security audit trail
+model AuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  actor_user_id String?  @db.Uuid
+  action        String   @db.VarChar(50)
+  resource_type String   @db.VarChar(50)
+  resource_id   String?  @db.Uuid
+  request_id    String?  @db.VarChar(50)
+  ip_address    String?  @db.VarChar(45)
+  user_agent    String?  @db.Text
+  old_values    Json?
+  new_values    Json?
+  metadata      Json?
+  created_at    DateTime @default(now()) @db.Timestamptz()
+
+  // Relations
+  actor         User?    @relation(fields: [actor_user_id], references: [id], onDelete: SetNull)
+
+  @@index([actor_user_id], name: "idx_audit_logs_actor")
+  @@index([action], name: "idx_audit_logs_action")
+  @@index([resource_type, resource_id], name: "idx_audit_logs_resource")
+  @@index([request_id], name: "idx_audit_logs_request_id")
+  @@index([created_at], name: "idx_audit_logs_created_at")
+  @@map("audit_logs")
+}

@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: globetrotter-db
+    restart: always
+    environment:
+      POSTGRES_DB: globetrotter
+      POSTGRES_USER: globetrotter
+      POSTGRES_PASSWORD: globetrotter_dev_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U globetrotter -d globetrotter"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
