@@ -96,6 +96,38 @@ export class ItineraryService {
   }
 
   /**
+   * Retrieves a single itinerary item by ID.
+   */
+  async getItineraryItem(
+    tripId: string,
+    itemId: string,
+    user: AuthenticatedUser,
+  ): Promise<ItineraryItemResponse> {
+    await this.verifyTripOwnership(tripId, user.id);
+
+    const item = await this.prisma.itineraryItem.findFirst({
+      where: {
+        id: itemId,
+        trip_stop: {
+          trip_id: tripId,
+        },
+      },
+      include: {
+        activity: true,
+        trip_section: true,
+        trip_stop: true,
+        expenses: true,
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Itinerary item not found for this trip.');
+    }
+
+    return this.toItemResponse(item);
+  }
+
+  /**
    * Creates a new itinerary item with cross-parent validation and date constraint checks.
    */
   async createItineraryItem(
