@@ -41,7 +41,7 @@ export default function UserTrendsAnalytics({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-white">
-              {telemetryTrends?.total_events || 34}
+              {telemetryTrends?.total_events || 0}
             </div>
             <div className="text-xs text-indigo-400 font-semibold mt-1">Live Database Telemetry</div>
           </div>
@@ -69,7 +69,7 @@ export default function UserTrendsAnalytics({
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-extrabold text-white">
-              {stats?.total_shares || 1}
+              {stats?.active_shares_count || 0}
             </div>
             <div className="text-xs text-sky-400 font-semibold mt-1">Crypto Token Links Active</div>
           </div>

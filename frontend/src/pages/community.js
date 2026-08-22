@@ -19,6 +19,7 @@
 
 import React, { useState } from 'react';
 import Layout from './Layout/Layout';
+import api from '../services/api';
 import SearchControlBar from '../components/SearchControlBar';
 
 const MOCK_POSTS = [
@@ -98,20 +99,26 @@ const MOCK_POSTS = [
 
 export default function CommunityPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [posts, setPosts] = useState(MOCK_POSTS);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleLikeClick = (id) => {
-    setPosts(prevPosts => 
-      prevPosts.map(p => 
-        p.id === id ? { ...p, likes: p.likes + 1, liked: true } : p
-      )
-    );
-  };
+  React.useEffect(() => {
+    api.get('/community/posts')
+      .then(data => {
+        setPosts(Array.isArray(data) ? data : (data?.items || []));
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch posts:', err);
+        setLoading(false);
+      });
+  }, []);
 
   const filteredPosts = posts.filter(post => 
-    post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.author.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.sharedTrip.place.toLowerCase().includes(searchQuery.toLowerCase())
+    post.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.author?.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.author?.last_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -131,85 +138,83 @@ export default function CommunityPage() {
 
           {/* Posts Feed Listings */}
           <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full mt-4">
-            {filteredPosts.length > 0 ? (
+            {loading ? (
+              <p className="text-sm text-zinc-500 font-sans text-center mt-10">Loading community posts...</p>
+            ) : filteredPosts.length === 0 ? (
+              <p className="text-sm text-zinc-500 font-sans text-center mt-10">No community posts found.</p>
+            ) : (
               filteredPosts.map((post) => (
-                <div key={post.id} className="flex gap-4 items-start bg-white border border-zinc-200 rounded-3xl p-5 sm:p-6 shadow-[0_2px_12px_-3px_rgba(0,0,0,0.03)] transition-all">
+                <div key={post.id} className="bg-white border border-zinc-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-4">
                   
-                  {/* Left Column: User Avatar (◯) */}
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-zinc-200 overflow-hidden shrink-0 shadow-sm">
+                  {/* Author Meta */}
+                  <div className="flex items-center gap-3">
                     <img 
-                      src={post.author.avatar} 
-                      alt={post.author.name}
-                      className="w-full h-full object-cover pointer-events-none"
+                      src={post.author?.avatar_url || "https://ui-avatars.com/api/?name=" + (post.author?.first_name || 'U')} 
+                      alt={post.author?.first_name} 
+                      className="w-10 h-10 rounded-full object-cover bg-zinc-200"
                     />
-                  </div>
-
-                  {/* Right Column: Post Body */}
-                  <div className="flex-grow flex flex-col gap-3">
-                    
-                    {/* Author Meta Details */}
-                    <div>
-                      <span className="font-bold text-zinc-800 text-xs sm:text-sm">
-                        {post.author.name}
-                      </span>
-                      <span className="text-[10px] sm:text-xs text-zinc-400 ml-2 font-medium">
-                        @{post.author.username} • {post.time}
-                      </span>
-                    </div>
-
-                    {/* Post Text Description */}
-                    <p className="text-zinc-600 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
-                      {post.content}
-                    </p>
-
-                    {/* Shared Trip Preview Box */}
-                    <div className="bg-zinc-50 border border-zinc-100 rounded-2xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:border-sky-500 transition-colors">
-                      <div>
-                        <span className="text-[9px] text-sky-600 font-bold uppercase tracking-wider block">
-                          📍 Shared Itinerary
-                        </span>
-                        <h4 className="text-xs sm:text-sm font-bold text-zinc-800 mt-0.5">
-                          {post.sharedTrip.title} ({post.sharedTrip.place})
-                        </h4>
-                        <span className="text-[11px] text-zinc-400 font-semibold font-sans mt-0.5 block">
-                          {post.sharedTrip.sectionsCount} Sections | Est. Budget: {post.sharedTrip.budget}
+                    <div className="flex flex-col">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-bold text-zinc-900 text-sm">
+                          {post.author?.first_name} {post.author?.last_name}
                         </span>
                       </div>
-                      <button className="bg-sky-600 hover:bg-sky-500 text-white rounded-xl px-4 py-2 text-[11px] font-bold transition-all shrink-0 cursor-pointer shadow-sm">
+                      <span className="text-[10px] text-zinc-400">
+                        {new Date(post.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Post Content */}
+                  <div>
+                    <h3 className="font-bold text-zinc-800 text-md">{post.title}</h3>
+                    <p className="text-sm text-zinc-600 font-sans leading-relaxed mt-1">
+                      {post.content}
+                    </p>
+                  </div>
+
+                  {/* Embedded Shared Itinerary */}
+                  {post.trip_id && (
+                    <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-pink-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider">
+                            Shared Itinerary
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-zinc-900 text-sm">{post.destination?.name || 'Travel Trip'}</h4>
+                        <span className="text-xs text-zinc-500">
+                          Click to view full shared itinerary
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => window.location.href = `/shared/${post.trip_id}`}
+                        className="bg-sky-600 hover:bg-sky-700 text-white rounded-lg px-5 py-2 text-xs font-bold shadow-sm transition-colors shrink-0"
+                      >
                         View Itinerary
                       </button>
                     </div>
+                  )}
 
-                    {/* Social Feed Actions Bar */}
-                    <div className="flex items-center gap-6 border-t border-zinc-100 pt-3 text-xs font-semibold text-zinc-400 font-sans">
-                      <button
-                        onClick={() => handleLikeClick(post.id)}
-                        className={`flex items-center gap-1.5 transition-colors cursor-pointer hover:text-rose-500 ${post.liked ? 'text-rose-500' : ''}`}
-                      >
-                        <span>{post.liked ? '❤️' : '♡'}</span>
-                        <span>{post.likes}</span>
-                      </button>
-                      <button className="flex items-center gap-1.5 transition-colors cursor-pointer hover:text-sky-600">
-                        <span>💬</span>
-                        <span>{post.comments}</span>
-                      </button>
-                      <button className="flex items-center gap-1.5 transition-colors cursor-pointer hover:text-zinc-950">
-                        <span>🔗</span>
-                        <span>Share</span>
-                      </button>
-                    </div>
-
+                  {/* Footer Stats */}
+                  <div className="flex items-center gap-6 mt-2 pt-4 border-t border-zinc-50">
+                    <button className="flex items-center gap-1.5 text-zinc-400 hover:text-sky-600 transition-colors text-xs font-semibold">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                      {post.reactions_count?.like || 0}
+                    </button>
+                    <button className="flex items-center gap-1.5 text-zinc-400 hover:text-sky-600 transition-colors text-xs font-semibold">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                      {post.comments_count || 0}
+                    </button>
                   </div>
-
+                  
                 </div>
               ))
-            ) : (
-              <div className="w-full border border-dashed border-zinc-200 bg-zinc-50/10 rounded-2xl py-12 text-center text-xs sm:text-sm text-zinc-400 font-medium">
-                No community posts match "{searchQuery}".
-              </div>
             )}
           </div>
-
         </div>
       </div>
     </Layout>

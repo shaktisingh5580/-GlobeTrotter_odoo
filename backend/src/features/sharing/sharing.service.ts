@@ -89,8 +89,13 @@ export class SharingService {
    * Public endpoint to view a shared trip without exposing any user PII or budget data.
    */
   async getSharedTrip(shareToken: string): Promise<SharedTripPublicResponse> {
-    const share = await this.prisma.sharedTrip.findUnique({
-      where: { share_token: shareToken },
+    const isUUID = shareToken.length === 36 && shareToken.includes('-');
+    const whereClause = isUUID 
+      ? { trip_id: shareToken, is_active: true } 
+      : { share_token: shareToken };
+
+    const share = await this.prisma.sharedTrip.findFirst({
+      where: whereClause,
       include: {
         trip: {
           include: {

@@ -14,7 +14,7 @@ export default function PopularCities({
     const popularItem = popularRankings.find(p => p.id === dest.id || p.name === dest.name);
     return {
       ...dest,
-      stops_count: popularItem?.stops_count || 0,
+      stops_count: popularItem?.trip_stops_count ?? popularItem?.stops_count ?? 0,
       popularity_score: dest.popularity_score || popularItem?.popularity_score || 70,
     };
   });

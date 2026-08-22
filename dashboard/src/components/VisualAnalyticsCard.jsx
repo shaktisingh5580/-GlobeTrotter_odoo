@@ -14,29 +14,24 @@ export default function VisualAnalyticsCard({ stats, popularDestinations, popula
 
   // Donut chart calculations (e.g. Users vs Trips vs Posts vs Destinations)
   const pieData = [
-    { label: 'Planned / Ongoing Trips', value: Math.max(totalTrips, 4), color: '#0284c7' }, // Sky
-    { label: 'Destinations Explored', value: Math.max(totalDestinations, 2), color: '#22c55e' }, // Green
-    { label: 'Community Posts', value: Math.max(totalPosts, 1), color: '#8b5cf6' }, // Purple
+    { label: 'Planned / Ongoing Trips', value: totalTrips, color: '#0284c7' }, // Sky
+    { label: 'Destinations Explored', value: totalDestinations, color: '#22c55e' }, // Green
+    { label: 'Community Posts', value: totalPosts, color: '#8b5cf6' }, // Purple
   ];
   const pieTotal = pieData.reduce((acc, item) => acc + item.value, 0);
 
   // Line chart points (simulated / live telemetry timeline)
-  const linePoints = [
-    { label: 'Week 1', value: 12, count: 12 },
-    { label: 'Week 2', value: 24, count: 24 },
-    { label: 'Week 3', value: 18, count: 18 },
-    { label: 'Week 4', value: 38, count: 38 },
-    { label: 'Week 5', value: 32, count: 32 },
-    { label: 'Week 6', value: 54, count: 54 },
-  ];
+  // We take the past 6 days/weeks from the backend trends or default to empty
+  const events = telemetryTrends?.events_by_type || [];
+  const linePoints = events.length > 0 ? events.slice(0, 6).map((e, i) => ({
+    label: `Evt ${i + 1}`,
+    value: e.count,
+    count: e.count,
+  })) : [];
 
   // Bar chart items (Top 3 destinations or categories)
-  const topBars = popularDestinations?.slice(0, 3) || [
-    { name: 'Tokyo', count: 14 },
-    { name: 'Paris', count: 11 },
-    { name: 'Rome', count: 8 },
-  ];
-  const maxBarVal = Math.max(...topBars.map(b => b.stops_count || b.count || 1), 1);
+  const topBars = popularDestinations?.length > 0 ? popularDestinations.slice(0, 3) : [];
+  const maxBarVal = topBars.length > 0 ? Math.max(...topBars.map(b => b.stops_count || b.count || 1), 1) : 1;
 
   return (
     <div className="w-full max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -136,7 +131,7 @@ export default function VisualAnalyticsCard({ stats, popularDestinations, popula
               {/* Center Content */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-2xl sm:text-3xl font-extrabold text-slate-800">
-                  {totalTrips + totalDestinations}
+                  {totalTrips + totalDestinations || 0}
                 </span>
                 <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Assets
@@ -209,42 +204,41 @@ export default function VisualAnalyticsCard({ stats, popularDestinations, popula
               />
 
               {/* Coral / Red Data Points */}
-              {[
-                { cx: 50, cy: 120, label: 'W1', val: 12 },
-                { cx: 140, cy: 85, label: 'W2', val: 24 },
-                { cx: 230, cy: 105, label: 'W3', val: 18 },
-                { cx: 320, cy: 60, label: 'W4', val: 38 },
-                { cx: 410, cy: 75, label: 'W5', val: 32 },
-                { cx: 530, cy: 35, label: 'W6', val: 54 },
-              ].map((pt, i) => (
-                <g key={i} className="cursor-pointer group">
-                  <circle
-                    cx={pt.cx}
-                    cy={pt.cy}
-                    r="8"
-                    fill="#e11d48"
-                    stroke="#ffffff"
-                    strokeWidth="3"
-                    className="transition-transform group-hover:scale-125"
-                  />
-                  <text
-                    x={pt.cx}
-                    y={pt.cy - 12}
-                    textAnchor="middle"
-                    className="text-[10px] font-bold fill-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    {pt.val}
-                  </text>
-                  <text
-                    x={pt.cx}
-                    y="155"
-                    textAnchor="middle"
-                    className="text-[10px] font-semibold fill-slate-500"
-                  >
-                    {pt.label}
-                  </text>
-                </g>
-              ))}
+              {linePoints.map((pt, i) => {
+                // Determine x,y based on value to draw dynamic points
+                const maxVal = Math.max(...linePoints.map(p => p.val || p.value || 0), 1);
+                const x = 50 + (i * 96); // Distribute evenly (480 / 5)
+                const y = 120 - (((pt.val || pt.value || 0) / maxVal) * 85);
+                return (
+                  <g key={i} className="cursor-pointer group">
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r="8"
+                      fill="#e11d48"
+                      stroke="#ffffff"
+                      strokeWidth="3"
+                      className="transition-transform group-hover:scale-125"
+                    />
+                    <text
+                      x={x}
+                      y={y - 12}
+                      textAnchor="middle"
+                      className="text-[10px] font-bold fill-slate-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      {pt.val || pt.value}
+                    </text>
+                    <text
+                      x={x}
+                      y="155"
+                      textAnchor="middle"
+                      className="text-[10px] font-semibold fill-slate-500"
+                    >
+                      {pt.label}
+                    </text>
+                  </g>
+                );
+              })}
             </svg>
           </div>
         </div>
@@ -260,14 +254,14 @@ export default function VisualAnalyticsCard({ stats, popularDestinations, popula
             </h5>
 
             <div className="flex items-end justify-around h-40 pt-4 px-2">
-              {topBars.map((bar, idx) => {
-                const heightPercent = Math.min(Math.max(((bar.stops_count || bar.count || 1) / maxBarVal) * 100, 35), 95);
+              {topBars.length > 0 ? topBars.map((bar, idx) => {
+                const heightPercent = Math.min(Math.max(((bar.trip_stops_count || bar.stops_count || bar.count || 1) / maxBarVal) * 100, 35), 95);
                 const colors = ['#f97316', '#fb923c', '#fdba74'];
 
                 return (
                   <div key={idx} className="flex flex-col items-center gap-2 group cursor-pointer">
                     <span className="text-xs font-bold text-slate-700 opacity-80 group-hover:opacity-100">
-                      {bar.stops_count || bar.count || 0}
+                      {bar.trip_stops_count || bar.stops_count || bar.count || 0}
                     </span>
                     <div
                       style={{ height: `${heightPercent}%`, backgroundColor: colors[idx] }}
@@ -278,7 +272,9 @@ export default function VisualAnalyticsCard({ stats, popularDestinations, popula
                     </span>
                   </div>
                 );
-              })}
+              }) : (
+                <div className="text-xs text-slate-400 w-full text-center mb-8">No destinations tracked yet</div>
+              )}
             </div>
           </div>
 

@@ -24,6 +24,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import api from '../services/api';
 import {
   varanasi_photo,
   font_varanasi,
@@ -89,6 +90,49 @@ const PlanTripModal = ({ isOpen, onClose, onCreateTrip }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedSuggestions, setSelectedSuggestions] = useState([]);
+  const [dbDestinations, setDbDestinations] = useState([]);
+  const [selectedDestinationDetails, setSelectedDestinationDetails] = useState(null);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState(SUGGESTIONS);
+
+  useEffect(() => {
+    if (isOpen) {
+      api.get('/destinations')
+        .then(data => {
+          const items = Array.isArray(data) ? data : (data?.items || []);
+          setDbDestinations(items);
+
+          // Update SUGGESTIONS with DB data dynamically
+          const updatedSuggestions = SUGGESTIONS.map(sug => {
+            // Find a matching activity in the DB
+            let matchingActivity = null;
+            for (const dest of items) {
+              if (dest.activities) {
+                const match = dest.activities.find(act => 
+                  act.name.toLowerCase().includes(sug.title.split(' ')[0].toLowerCase()) && 
+                  (act.name.toLowerCase().includes('aarti') || act.name.toLowerCase().includes('hill') || 
+                   act.name.toLowerCase().includes('nubra') || act.name.toLowerCase().includes('hidimba') ||
+                   act.name.toLowerCase().includes('train') || act.name.toLowerCase().includes('pichola'))
+                );
+                if (match) {
+                  matchingActivity = match;
+                  break;
+                }
+              }
+            }
+            if (matchingActivity) {
+              return {
+                ...sug,
+                title: matchingActivity.name,
+                category: matchingActivity.category
+              };
+            }
+            return sug;
+          });
+          setDynamicSuggestions(updatedSuggestions);
+        })
+        .catch(err => console.error("Failed to fetch destinations:", err));
+    }
+  }, [isOpen]);
 
   // Listen to Escape key to close modal
   useEffect(() => {
@@ -128,6 +172,7 @@ const PlanTripModal = ({ isOpen, onClose, onCreateTrip }) => {
     setStartDate('');
     setEndDate('');
     setSelectedSuggestions([]);
+    setSelectedDestinationDetails(null);
     onClose();
   };
 
@@ -171,14 +216,26 @@ const PlanTripModal = ({ isOpen, onClose, onCreateTrip }) => {
               <label className="text-sm font-semibold text-zinc-700 font-sans">
                 Select a Place:
               </label>
-              <input
-                type="text"
+              <select
                 required
                 value={place}
-                onChange={(e) => setPlace(e.target.value)}
-                placeholder="e.g. Kyoto, Japan"
-                className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm sm:text-base"
-              />
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPlace(val);
+                  const dest = dbDestinations.find(d => d.name === val);
+                  if (dest) {
+                    setSelectedDestinationDetails(dest);
+                  } else {
+                    setSelectedDestinationDetails(null);
+                  }
+                }}
+                className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm sm:text-base appearance-none"
+              >
+                <option value="" disabled>e.g. Kyoto, Japan</option>
+                {dbDestinations.map(d => (
+                  <option key={d.id} value={d.name}>{d.name}, {d.country}</option>
+                ))}
+              </select>
             </div>
 
             {/* Start Date */}
@@ -213,6 +270,41 @@ const PlanTripModal = ({ isOpen, onClose, onCreateTrip }) => {
 
           <hr className="border-zinc-100" />
 
+          {/* Destination Details View */}
+          {selectedDestinationDetails && (
+            <div className="flex flex-col gap-4 bg-zinc-50 rounded-2xl p-6 border border-zinc-200">
+              <div className="flex flex-col sm:flex-row gap-6">
+                <div className="w-full sm:w-1/3 aspect-video sm:aspect-square relative rounded-xl overflow-hidden shadow-sm shrink-0">
+                  <Image 
+                    src={selectedDestinationDetails.image_url || selectedDestinationDetails.image} 
+                    alt={selectedDestinationDetails.name} 
+                    fill 
+                    className="object-cover"
+                    unoptimized 
+                  />
+                </div>
+                <div className="flex flex-col gap-2 flex-grow">
+                  <h3 className="text-xl font-serif text-zinc-900">{selectedDestinationDetails.name}, {selectedDestinationDetails.country}</h3>
+                  <p className="text-sm text-zinc-600 leading-relaxed font-sans">{selectedDestinationDetails.description}</p>
+                  
+                  {selectedDestinationDetails.activities && selectedDestinationDetails.activities.length > 0 && (
+                    <div className="mt-4 flex flex-col gap-2">
+                      <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Top Activities</h4>
+                      <ul className="flex flex-col gap-2">
+                        {selectedDestinationDetails.activities.slice(0, 3).map((act, i) => (
+                          <li key={i} className="text-sm text-zinc-700 bg-white px-3 py-2 rounded-lg border border-zinc-100 shadow-sm flex flex-col">
+                            <span className="font-semibold text-zinc-900">{act.name}</span>
+                            <span className="text-xs text-zinc-500">{act.description}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Suggestions Section */}
           <div className="flex flex-col gap-4">
             <h3 className="text-sm font-bold text-zinc-500 tracking-wider uppercase font-sans">
@@ -221,13 +313,24 @@ const PlanTripModal = ({ isOpen, onClose, onCreateTrip }) => {
 
             {/* Suggestions Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {SUGGESTIONS.map((sug) => {
+              {dynamicSuggestions.map((sug) => {
                 const isSelected = selectedSuggestions.includes(sug.id);
 
                 return (
                   <div
                     key={sug.id}
-                    onClick={() => toggleSuggestion(sug.id)}
+                    onClick={() => {
+                      toggleSuggestion(sug.id);
+                      // Auto-select dropdown if the suggestion matches a destination
+                      const matchingDest = dbDestinations.find(d => 
+                        sug.title.toLowerCase().includes(d.name.toLowerCase()) || 
+                        d.activities?.some(act => act.name === sug.title)
+                      );
+                      if (matchingDest) {
+                        setPlace(matchingDest.name);
+                        setSelectedDestinationDetails(matchingDest);
+                      }
+                    }}
                     className={`relative aspect-square rounded-2xl overflow-hidden border-2 cursor-pointer transition-all duration-200 select-none shadow-sm ${
                       isSelected 
                         ? 'border-sky-600 shadow-md ring-4 ring-sky-600/10 scale-[0.98]' 

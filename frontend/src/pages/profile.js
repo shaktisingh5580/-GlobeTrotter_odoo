@@ -37,12 +37,14 @@ export default function ProfilePage() {
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [photoPreview, setPhotoPreview] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   // Password Update States
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordMessage, setPasswordMessage] = useState('');
+  const [trips, setTrips] = useState([]);
 
   const fileInputRef = useRef(null);
 
@@ -97,12 +99,30 @@ export default function ProfilePage() {
         .catch(err => {
           console.warn('Backend stats fetch notice:', err.message);
         });
+
+      // Fetch user trips for the new wireframe sections
+      api.get('/trips')
+        .then(res => {
+          const items = Array.isArray(res) ? res : (res?.items || []);
+          setTrips(items);
+        })
+        .catch(err => {
+          console.warn('Backend trips fetch notice:', err.message);
+        });
     }
   }, []);
+
+  // Process trips
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const preplannedTrips = trips.filter(t => new Date(t.end_date) >= today || new Date(t.start_date) >= today);
+  const previousTrips = trips.filter(t => new Date(t.end_date) < today);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPhotoPreview(reader.result);
@@ -124,15 +144,35 @@ export default function ProfilePage() {
     try {
       setPasswordMessage('');
 
+      let avatarFileId = undefined;
+      if (selectedFile) {
+        try {
+          const formData = new FormData();
+          formData.append('image', selectedFile);
+          const uploadRes = await api.post('/uploads/image', formData);
+          avatarFileId = uploadRes?.id;
+        } catch (uploadErr) {
+          console.error("Image upload failed:", uploadErr);
+          setPasswordMessage(uploadErr.message || "Failed to upload image.");
+          return;
+        }
+      }
+
       // 1. Submit Profile fields updates
-      const updatedProfile = await api.patch('/users/me', {
+      const updatePayload = {
         first_name: firstName,
         last_name: lastName,
         bio: additionalInfo,
         phone: phone,
         city: city,
         country: country
-      });
+      };
+
+      if (avatarFileId) {
+        updatePayload.avatar_file_id = avatarFileId;
+      }
+
+      const updatedProfile = await api.patch('/users/me', updatePayload);
 
       // 2. Handle Password change if requested
       if (newPassword) {
@@ -473,6 +513,60 @@ export default function ProfilePage() {
             </div>
 
           </form>
+
+          {/* Preplanned Trips Section */}
+          <div className="flex flex-col gap-4 mt-4">
+            <h2 className="text-lg sm:text-xl font-serif text-zinc-900">Preplanned Trips</h2>
+            {preplannedTrips.length === 0 ? (
+              <p className="text-sm text-zinc-500">No preplanned trips.</p>
+            ) : (
+              <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
+                {preplannedTrips.map(trip => (
+                  <div key={trip.id} className="min-w-[200px] w-[200px] sm:w-[240px] shrink-0 bg-white border border-zinc-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm snap-start">
+                    <div className="aspect-[4/3] bg-zinc-100 rounded-xl overflow-hidden relative">
+                      {trip.cover_file_id || trip.image_url ? (
+                        <img src={trip.cover_file_id || trip.image_url} alt={trip.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-zinc-200 text-zinc-400 font-serif font-bold text-xl">{trip.title.substring(0, 6)}</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1 flex-grow">
+                      <h3 className="font-bold text-zinc-900 text-sm truncate">{trip.title}</h3>
+                      <p className="text-xs text-zinc-500">{new Date(trip.start_date).toLocaleDateString()}</p>
+                    </div>
+                    <button onClick={() => router.push(`/${user.id}/trip/${trip.id}`)} className="w-full py-1.5 border border-zinc-200 rounded-lg text-xs font-bold hover:bg-zinc-50 transition-colors">View</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Previous Trips Section */}
+          <div className="flex flex-col gap-4 mt-2">
+            <h2 className="text-lg sm:text-xl font-serif text-zinc-900">Previous Trips</h2>
+            {previousTrips.length === 0 ? (
+              <p className="text-sm text-zinc-500">No previous trips.</p>
+            ) : (
+              <div className="flex overflow-x-auto gap-4 pb-4 snap-x">
+                {previousTrips.map(trip => (
+                  <div key={trip.id} className="min-w-[200px] w-[200px] sm:w-[240px] shrink-0 bg-white border border-zinc-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm snap-start">
+                    <div className="aspect-[4/3] bg-zinc-100 rounded-xl overflow-hidden relative">
+                      {trip.cover_file_id || trip.image_url ? (
+                        <img src={trip.cover_file_id || trip.image_url} alt={trip.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-zinc-200 text-zinc-400 font-serif font-bold text-xl">{trip.title.substring(0, 6)}</div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1 flex-grow">
+                      <h3 className="font-bold text-zinc-900 text-sm truncate">{trip.title}</h3>
+                      <p className="text-xs text-zinc-500">{new Date(trip.start_date).toLocaleDateString()}</p>
+                    </div>
+                    <button onClick={() => router.push(`/${user.id}/trip/${trip.id}`)} className="w-full py-1.5 border border-zinc-200 rounded-lg text-xs font-bold hover:bg-zinc-50 transition-colors">View</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

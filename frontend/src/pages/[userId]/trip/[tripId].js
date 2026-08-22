@@ -28,6 +28,12 @@ export default function TripDetailsPage() {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareData, setShareData] = useState(null);
+  const [sharing, setSharing] = useState(false);
+  const [communityPosting, setCommunityPosting] = useState(false);
+  const [communityPostSuccess, setCommunityPostSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!router.isReady || !tripId) return;
@@ -125,8 +131,118 @@ export default function TripDetailsPage() {
     return total > 0 ? `${trip.currency || 'INR'} ${total}` : 'Unspecified';
   };
 
+  const handleShareClick = async () => {
+    setIsShareModalOpen(true);
+    setSharing(true);
+    try {
+      const response = await api.post(`/sharing/trips/${tripId}/share`, {
+        visibility: 'LINK_ONLY',
+        expires_in_days: 30
+      });
+      setShareData(response);
+    } catch (err) {
+      console.error('Failed to generate share link:', err);
+      alert('Failed to generate share link.');
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handlePostToCommunity = async () => {
+    if (communityPosting || communityPostSuccess) return;
+    setCommunityPosting(true);
+    try {
+      await api.post('/community/posts', {
+        title: `Just planned a trip to ${trip.description || 'a new destination'}!`,
+        content: `Check out my itinerary for ${trip.title}.`,
+        trip_id: tripId
+      });
+      setCommunityPostSuccess(true);
+      setTimeout(() => {
+        setIsShareModalOpen(false);
+        setCommunityPostSuccess(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to post to community:', err);
+      alert('Failed to post to community.');
+    } finally {
+      setCommunityPosting(false);
+    }
+  };
+
   return (
     <Layout>
+      {/* Share Modal */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-5 border border-zinc-100">
+            <div className="flex justify-between items-center border-b border-zinc-100 pb-3">
+              <h3 className="text-lg font-serif font-semibold text-zinc-900">Share Your Itinerary</h3>
+              <button onClick={() => { setIsShareModalOpen(false); setShareData(null); setCopied(false); }} className="text-zinc-400 hover:text-zinc-800 transition-colors">
+                ✕
+              </button>
+            </div>
+            
+            {sharing ? (
+              <p className="text-sm text-zinc-500 py-4 text-center">Generating secure link...</p>
+            ) : shareData ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-zinc-600 font-sans leading-relaxed">
+                  Anyone with this link can view a read-only version of your itinerary. Budgets and private notes are hidden.
+                </p>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={shareData.share_url} 
+                    className="flex-grow bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm text-zinc-700 outline-none"
+                  />
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(shareData.share_url);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shrink-0"
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-4 my-2">
+                  <hr className="flex-grow border-zinc-100" />
+                  <span className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">OR</span>
+                  <hr className="flex-grow border-zinc-100" />
+                </div>
+
+                <button 
+                  onClick={handlePostToCommunity}
+                  disabled={communityPosting || communityPostSuccess}
+                  className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors flex justify-center items-center gap-2 ${
+                    communityPostSuccess 
+                      ? 'bg-emerald-500 hover:bg-emerald-600 text-white' 
+                      : 'bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white'
+                  }`}
+                >
+                  {communityPostSuccess ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                      Posted to Community!
+                    </>
+                  ) : communityPosting ? (
+                    'Posting...'
+                  ) : (
+                    'Post to Community Feed'
+                  )}
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-red-500 py-4 text-center">Failed to load share data.</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="w-full bg-white min-h-screen pt-24 pb-16">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
           
@@ -154,14 +270,24 @@ export default function TripDetailsPage() {
               </p>
             </div>
 
-            {/* Total Budget Badge */}
-            <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 sm:p-5 flex flex-col gap-1 items-start sm:items-end shrink-0">
-              <span className="text-[10px] text-sky-700 font-bold uppercase tracking-wider">
-                Total Budget
-              </span>
-              <span className="text-xl sm:text-2xl font-bold text-sky-900 font-sans">
-                {calculateTotalBudget()}
-              </span>
+            {/* Total Budget Badge & Share Button */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <button
+                onClick={handleShareClick}
+                className="bg-sky-50 text-sky-600 hover:bg-sky-100 hover:text-sky-700 border border-sky-200 rounded-xl px-5 py-2.5 text-sm font-bold tracking-wide transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                Share
+              </button>
+              
+              <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 sm:p-5 flex flex-col gap-1 items-start sm:items-end shrink-0">
+                <span className="text-[10px] text-sky-700 font-bold uppercase tracking-wider">
+                  Total Budget
+                </span>
+                <span className="text-xl sm:text-2xl font-bold text-sky-900 font-sans">
+                  {calculateTotalBudget()}
+                </span>
+              </div>
             </div>
           </div>
 

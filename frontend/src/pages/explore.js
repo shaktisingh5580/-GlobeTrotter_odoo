@@ -126,7 +126,8 @@ export default function ExplorePage() {
 
   // Helper to parse numeric prices e.g. "$180" -> 180
   const getNumericPrice = (pStr) => {
-    return parseFloat(pStr.replace(/[^0-9.]/g, '')) || 0;
+    if (!pStr) return 0;
+    return parseFloat(String(pStr).replace(/[^0-9.]/g, '')) || 0;
   };
 
   // 1. Process Filtering & Searching

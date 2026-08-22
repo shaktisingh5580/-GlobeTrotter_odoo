@@ -79,7 +79,7 @@ export default function Home() {
         description: fullTripData.place,
         start_date: fullTripData.startDate, 
         end_date: fullTripData.endDate, 
-        budget_limit: parseFloat(fullTripData.budget.replace(/[^0-9.]/g, '')) || 0,
+        budget_limit: fullTripData.budget ? parseFloat(String(fullTripData.budget).replace(/[^0-9.]/g, '')) || 0 : 0,
         currency: 'INR',
         status: 'PLANNED'
       };
@@ -96,7 +96,7 @@ export default function Home() {
             section_type: 'CUSTOM',
             start_date: sec.startDate || fullTripData.startDate,
             end_date: sec.endDate || fullTripData.endDate,
-            planned_budget: parseFloat(sec.budget.replace(/[^0-9.]/g, '')) || 0,
+            planned_budget: sec.budget ? parseFloat(String(sec.budget).replace(/[^0-9.]/g, '')) || 0 : 0,
             section_order: i + 1
           };
           await api.post(`/trips/${trip.id}/sections`, sectionPayload);

@@ -1,4 +1,4 @@
-import { PrismaClient, Role, ActivityCategory } from '@prisma/client';
+import { PrismaClient, Role, ActivityCategory, TripStatus, ExpenseCategory } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -198,12 +198,12 @@ async function main() {
         },
         {
           name: 'Arashiyama Bamboo Grove & Monkey Park',
-          description: 'Stroll beneath towering green bamboo stalks and visit the wild Japanese macaque reserve.',
+          description: 'Wander through towering bamboo stalks and feed macaques with city views.',
           category: ActivityCategory.NATURE,
           estimated_cost: 1500,
           currency: 'INR',
-          duration_minutes: 180,
-          rating: 4.8,
+          duration_minutes: 240,
+          rating: 4.7,
         },
         {
           name: 'Kinkaku-ji Golden Pavilion',
@@ -212,6 +212,48 @@ async function main() {
           estimated_cost: 800,
           currency: 'INR',
           duration_minutes: 90,
+          rating: 4.7,
+        },
+      ],
+    },
+    {
+      name: 'Varanasi',
+      country: 'India',
+      country_code: 'IN',
+      region: 'South Asia',
+      description: 'The spiritual capital of India, known for its sacred Ganges River, ghats, and ancient traditions.',
+      image_url: '/images/varanasi.webp',
+      latitude: 25.3176,
+      longitude: 83.0039,
+      timezone: 'Asia/Kolkata',
+      cost_index: 2,
+      popularity_score: 93,
+      activities: [
+        {
+          name: 'Ganga Aarti at Dashashwamedh Ghat',
+          description: 'A spectacular evening fire offering ceremony by the banks of the sacred Ganges.',
+          category: ActivityCategory.CULTURE,
+          estimated_cost: 0,
+          currency: 'INR',
+          duration_minutes: 60,
+          rating: 4.9,
+        },
+        {
+          name: 'Morning Boat Ride on the Ganges',
+          description: 'Experience the mystical sunrise over the ghats from a traditional wooden rowboat.',
+          category: ActivityCategory.SIGHTSEEING,
+          estimated_cost: 500,
+          currency: 'INR',
+          duration_minutes: 90,
+          rating: 4.8,
+        },
+        {
+          name: 'Kashi Vishwanath Temple Visit',
+          description: 'One of the most famous Hindu temples dedicated to Lord Shiva, featuring golden spires.',
+          category: ActivityCategory.CULTURE,
+          estimated_cost: 0,
+          currency: 'INR',
+          duration_minutes: 120,
           rating: 4.7,
         },
       ],
@@ -300,6 +342,147 @@ async function main() {
         },
       ],
     },
+    {
+      name: 'Ladakh',
+      country: 'India',
+      country_code: 'IN',
+      region: 'South Asia',
+      description: 'The Land of High Passes, known for its breathtaking landscapes, crystal clear skies, and Buddhist monasteries.',
+      image_url: '/images/Magnetic_Hill.webp',
+      latitude: 34.1526,
+      longitude: 77.5771,
+      timezone: 'Asia/Kolkata',
+      cost_index: 3,
+      popularity_score: 91,
+      activities: [
+        {
+          name: 'Magnetic Hill Experience',
+          description: 'Experience the gravity-defying phenomenon at the famous Magnetic Hill.',
+          category: ActivityCategory.ADVENTURE,
+          estimated_cost: 0,
+          currency: 'INR',
+          duration_minutes: 60,
+          rating: 4.8,
+        },
+        {
+          name: 'Nubra Valley Safari',
+          description: 'Ride the double-humped Bactrian camels across the high-altitude cold desert dunes.',
+          category: ActivityCategory.NATURE,
+          estimated_cost: 1500,
+          currency: 'INR',
+          duration_minutes: 180,
+          rating: 4.9,
+        },
+      ],
+    },
+    {
+      name: 'Manali',
+      country: 'India',
+      country_code: 'IN',
+      region: 'South Asia',
+      description: 'A high-altitude Himalayan resort town known for backpacking, skiing, and trekking adventures.',
+      image_url: '/images/Hidimba-Devi-Temple-manali-large.webp',
+      latitude: 32.2396,
+      longitude: 77.1887,
+      timezone: 'Asia/Kolkata',
+      cost_index: 2,
+      popularity_score: 94,
+      activities: [
+        {
+          name: 'Hidimba Devi Temple Visit',
+          description: 'Ancient cave temple surrounded by a cedar forest, dedicated to Goddess Hidimba.',
+          category: ActivityCategory.CULTURE,
+          estimated_cost: 0,
+          currency: 'INR',
+          duration_minutes: 60,
+          rating: 4.7,
+        },
+        {
+          name: 'Jogini Waterfall Trek',
+          description: 'A scenic trek through apple orchards leading to a spectacular cascading waterfall.',
+          category: ActivityCategory.ADVENTURE,
+          estimated_cost: 0,
+          currency: 'INR',
+          duration_minutes: 180,
+          rating: 4.8,
+        },
+        {
+          name: 'Rohtang Pass Excursion',
+          description: 'High mountain pass on the eastern Pir Panjal Range offering breathtaking snow views.',
+          category: ActivityCategory.SIGHTSEEING,
+          estimated_cost: 2500,
+          currency: 'INR',
+          duration_minutes: 360,
+          rating: 4.9,
+        },
+      ],
+    },
+    {
+      name: 'Shimla',
+      country: 'India',
+      country_code: 'IN',
+      region: 'South Asia',
+      description: 'The former summer capital of British India, famous for its colonial architecture and Toy Train.',
+      image_url: '/images/Toy_Train_Ride.webp',
+      latitude: 31.1048,
+      longitude: 77.1734,
+      timezone: 'Asia/Kolkata',
+      cost_index: 2,
+      popularity_score: 92,
+      activities: [
+        {
+          name: 'Toy Train Ride (Kalka-Shimla)',
+          description: 'A scenic narrow-gauge railway journey through the picturesque mountains of Himachal.',
+          category: ActivityCategory.ADVENTURE,
+          estimated_cost: 800,
+          currency: 'INR',
+          duration_minutes: 300,
+          rating: 4.9,
+        },
+        {
+          name: 'The Ridge and Mall Road Walk',
+          description: 'Stroll along the historic hub of Shimla to enjoy shopping, cafes, and Christ Church.',
+          category: ActivityCategory.SIGHTSEEING,
+          estimated_cost: 500,
+          currency: 'INR',
+          duration_minutes: 120,
+          rating: 4.7,
+        },
+      ],
+    },
+    {
+      name: 'Udaipur',
+      country: 'India',
+      country_code: 'IN',
+      region: 'South Asia',
+      description: 'The City of Lakes, known for its lavish royal residences and serene waters.',
+      image_url: '/images/Lake_Pichola.webp',
+      latitude: 24.5854,
+      longitude: 73.7125,
+      timezone: 'Asia/Kolkata',
+      cost_index: 2,
+      popularity_score: 95,
+      activities: [
+        {
+          name: 'Lake Pichola Boat Ride',
+          description: 'A tranquil boat ride offering stunning views of the City Palace and Jag Mandir.',
+          category: ActivityCategory.SIGHTSEEING,
+          estimated_cost: 800,
+          currency: 'INR',
+          duration_minutes: 60,
+          rating: 4.9,
+        },
+        {
+          name: 'Saheliyon Ki Bari Tour',
+          description: 'Visit the historic Garden of the Maidens featuring marble elephants and lotus pools.',
+          category: ActivityCategory.NATURE,
+          estimated_cost: 200,
+          currency: 'INR',
+          duration_minutes: 90,
+          rating: 4.6,
+        },
+      ],
+    },
   ];
 
   for (const dest of destinationsData) {
@@ -335,7 +518,97 @@ async function main() {
     }
   }
 
+  // --- 4. Seed Real Trips & Analytics for the Dashboard ---
+  
+  // A. Create a Trip to Paris & Rome for Demo User
+  const paris = await prisma.destination.findFirst({ where: { name: 'Paris' } });
+  const rome = await prisma.destination.findFirst({ where: { name: 'Rome' } });
+  
+  if (paris && rome) {
+    const trip = await prisma.trip.create({
+      data: {
+        user_id: demoUser.id,
+        title: 'Euro Summer 2026',
+        start_date: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+        end_date: new Date(new Date().setMonth(new Date().getMonth() + 1, new Date().getDate() + 14)),
+        budget_limit: 500000,
+        currency: 'INR',
+        status: TripStatus.PLANNED,
+        stops: {
+          create: [
+            {
+              destination_id: paris.id,
+              arrival_date: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+              departure_date: new Date(new Date().setMonth(new Date().getMonth() + 1, new Date().getDate() + 5)),
+              stop_order: 1,
+            },
+            {
+              destination_id: rome.id,
+              arrival_date: new Date(new Date().setMonth(new Date().getMonth() + 1, new Date().getDate() + 5)),
+              departure_date: new Date(new Date().setMonth(new Date().getMonth() + 1, new Date().getDate() + 10)),
+              stop_order: 2,
+            },
+          ]
+        },
+        expenses: {
+          create: [
+            { amount: 45000, currency: 'INR', category: ExpenseCategory.TRANSPORT, title: 'Flights', notes: 'Air India Round Trip', expense_date: new Date() },
+            { amount: 15000, currency: 'INR', category: ExpenseCategory.STAY, title: 'Accommodation', notes: 'Paris Hotel Deposit', expense_date: new Date() },
+          ]
+        }
+      },
+      include: { stops: true }
+    });
+
+    // Seed Itinerary Items
+    const parisStop = trip.stops.find((s: any) => s.destination_id === paris.id);
+    const eiffel = await prisma.activity.findFirst({ where: { name: 'Eiffel Tower Summit Tour' } });
+    if (parisStop && eiffel) {
+      await prisma.itineraryItem.create({
+        data: {
+          trip_stop_id: parisStop.id,
+          activity_id: eiffel.id,
+          item_date: parisStop.arrival_date,
+          start_time: '14:00',
+          end_time: '16:30',
+          item_order: 1,
+          notes: 'Booked online'
+        }
+      });
+    }
+  }
+
+  // B. Seed Community Post
+  await prisma.communityPost.create({
+    data: {
+      user_id: demoUser.id,
+      title: 'Tips for first time in Japan?',
+      content: 'I am planning a trip to Tokyo and Kyoto. Any hidden gems I should know about?',
+    }
+  });
+
+  // C. Seed Analytics Events for the Line Chart (User Engagement & Activity Velocity)
+  // Dashboard requests last 30d. We will simulate events across the past 6 weeks.
+  const now = new Date();
+  const eventTypes = ['LOGIN', 'TRIP_CREATED', 'DESTINATION_VIEW', 'ACTIVITY_ADDED', 'COMMUNITY_POST'];
+  
+  for (let i = 0; i < 50; i++) {
+    const randomDaysAgo = Math.floor(Math.random() * 30);
+    const randomDate = new Date(now.getTime() - randomDaysAgo * 24 * 60 * 60 * 1000);
+    const randomType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+    
+    await prisma.analyticsEvent.create({
+      data: {
+        event_type: randomType,
+        user_id: demoUser.id,
+        created_at: randomDate,
+        metadata: { source: 'seed' }
+      }
+    });
+  }
+
   console.log('✓ Curated destination catalog & points of interest seeded successfully.');
+  console.log('✓ Trips, Analytics, and Community Posts seeded.');
 }
 
 main()

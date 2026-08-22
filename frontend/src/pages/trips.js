@@ -44,7 +44,7 @@ export default function Trips() {
       // Fetch user's trips from NestJS
       api.get('/trips')
         .then(data => {
-          setTrips(data.items || []);
+          setTrips(Array.isArray(data) ? data : (data.items || []));
         })
         .catch(err => {
           console.error('Failed to fetch trips:', err);
@@ -141,21 +141,21 @@ export default function Trips() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-100 pb-6">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full border border-zinc-200 overflow-hidden shrink-0 shadow-sm bg-zinc-100 flex items-center justify-center">
-                  {user.photo ? (
+                  {user.avatar_url ? (
                     <img 
-                      src={user.photo}
-                      alt={user.username}
+                      src={user.avatar_url}
+                      alt={user.first_name}
                       className="w-full h-full object-cover pointer-events-none"
                     />
                   ) : (
                     <span className="text-2xl font-bold text-zinc-400">
-                      {(user.username || 'U')[0].toUpperCase()}
+                      {(user.first_name || 'U')[0].toUpperCase()}
                     </span>
                   )}
                 </div>
                 <div>
                   <h1 className="text-xl sm:text-2xl font-serif font-normal text-zinc-950">
-                    Welcome back, {user.username}!
+                    Welcome back, {user.first_name}!
                   </h1>
                   <p className="text-xs sm:text-sm text-zinc-400">
                     Manage and review all your planned travel itineraries.

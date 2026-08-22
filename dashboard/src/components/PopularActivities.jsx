@@ -91,7 +91,7 @@ export default function PopularActivities({
                     </span>
                     <span className="inline-flex items-center gap-1 text-xs font-extrabold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full">
                       <Flame size={12} />
-                      <span>{act.scheduled_count || 1} Scheduled</span>
+                      <span>{act.scheduled_count || 0} Scheduled</span>
                     </span>
                   </div>
 
