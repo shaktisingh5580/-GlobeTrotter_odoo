@@ -107,14 +107,14 @@ const PreviousTripsSection = ({ onPlanTrip }) => {
               className="w-10 h-10 rounded-full border border-zinc-200 hover:border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-950 transition-colors active:scale-95 cursor-pointer"
               aria-label="Scroll Left"
             >
-              &larr;
+              ←
             </button>
             <button
               onClick={scrollRight}
               className="w-10 h-10 rounded-full border border-zinc-200 hover:border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-950 transition-colors active:scale-95 cursor-pointer"
               aria-label="Scroll Right"
             >
-              &rarr;
+              →
             </button>
           </div>
         </div>
