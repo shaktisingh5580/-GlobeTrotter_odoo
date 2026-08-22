@@ -19,6 +19,7 @@ import { UsersModule } from './features/users/users.module';
 import { TripsModule } from './features/trips/trips.module';
 import { StopsModule } from './features/stops/stops.module';
 import { SectionsModule } from './features/sections/sections.module';
+import { DestinationsModule } from './features/destinations/destinations.module';
 
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { RlsContextMiddleware } from './common/middleware/rls-context.middleware';
@@ -41,6 +42,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     TripsModule,
     StopsModule,
     SectionsModule,
+    DestinationsModule,
     JwtModule.registerAsync({
       global: true,
       imports: [AppConfigModule],
