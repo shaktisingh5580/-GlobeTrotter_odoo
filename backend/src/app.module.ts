@@ -17,6 +17,7 @@ import { UploadsModule } from './features/uploads/uploads.module';
 import { AuthModule } from './features/auth/auth.module';
 import { UsersModule } from './features/users/users.module';
 import { TripsModule } from './features/trips/trips.module';
+import { StopsModule } from './features/stops/stops.module';
 
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { RlsContextMiddleware } from './common/middleware/rls-context.middleware';
@@ -37,6 +38,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     AuthModule,
     UsersModule,
     TripsModule,
+    StopsModule,
     JwtModule.registerAsync({
       global: true,
       imports: [AppConfigModule],
