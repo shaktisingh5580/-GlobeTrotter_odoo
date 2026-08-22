@@ -47,33 +47,57 @@ export default function ProfilePage() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    // Fetch profile details from database
-    api.get('/users/me')
-      .then(profile => {
-        setUser(profile);
-        setFirstName(profile.first_name || '');
-        setLastName(profile.last_name || '');
-        setUsername(profile.first_name ? `${profile.first_name} ${profile.last_name}` : profile.email.split('@')[0]);
-        setEmail(profile.email || '');
-        setPhone(profile.phone || '');
-        setCity(profile.city || '');
-        setCountry(profile.country || '');
-        setAdditionalInfo(profile.bio || '');
-        setPhotoPreview(profile.avatar_url || '');
-      })
-      .catch(err => {
-        console.error('Failed to fetch user profile:', err);
-        router.push('/');
-      });
+    const token = typeof window !== 'undefined' ? localStorage.getItem('globe_access_token') : null;
+    const storedUser = typeof window !== 'undefined' ? localStorage.getItem('globe_user') : null;
 
-    // Fetch user trip stats count
-    api.get('/users/me/stats')
-      .then(stats => {
-        setTripsCount(stats.total_trips || 0);
-      })
-      .catch(err => {
-        console.error('Failed to fetch stats:', err);
-      });
+    if (!token && !storedUser) {
+      router.push('/');
+      return;
+    }
+
+    if (storedUser) {
+      try {
+        const u = JSON.parse(storedUser);
+        setUser(u);
+        setFirstName(u.first_name || u.firstName || '');
+        setLastName(u.last_name || u.lastName || '');
+        setEmail(u.email || '');
+        setCity(u.city || '');
+        setCountry(u.country || '');
+      } catch {}
+    }
+
+    if (token) {
+      // Fetch profile details from database
+      api.get('/users/me')
+        .then(res => {
+          const profile = res?.data || res;
+          if (!profile) return;
+          setUser(profile);
+          setFirstName(profile.first_name || '');
+          setLastName(profile.last_name || '');
+          setUsername(profile.first_name ? `${profile.first_name} ${profile.last_name}` : (profile.email ? profile.email.split('@')[0] : 'User'));
+          setEmail(profile.email || '');
+          setPhone(profile.phone || '');
+          setCity(profile.city || '');
+          setCountry(profile.country || '');
+          setAdditionalInfo(profile.bio || '');
+          setPhotoPreview(profile.avatar_url || '');
+        })
+        .catch(err => {
+          console.warn('Backend user profile fetch notice:', err.message);
+        });
+
+      // Fetch user trip stats count
+      api.get('/users/me/stats')
+        .then(res => {
+          const stats = res?.data || res;
+          if (stats) setTripsCount(stats.total_trips || 0);
+        })
+        .catch(err => {
+          console.warn('Backend stats fetch notice:', err.message);
+        });
+    }
   }, []);
 
   const handleFileChange = (e) => {
