@@ -2,12 +2,12 @@
  * User Profile Page Component
  *
  * Purpose:
- * Renders the authenticated user's profile dashboard route (/profile) with in-place editing and Change Password features.
+ * Renders the authenticated user's profile dashboard route (/profile) with in-place editing and Change Password features integrated with NestJS.
  *
  * Responsibility:
- * - Reads full user registration data details from browser localStorage.
- * - Supports editing of all fields (Name, Username, Contact, Bio, Avatar image upload & camera options).
- * - Implements a "Change Password" security section inside the edit mode.
+ * - Fetches user attributes from /users/me.
+ * - Submits profile updates to PATCH /users/me.
+ * - Submits password updates to PATCH /users/me/password.
  * - Restricts access to guest users by redirecting unauthenticated viewports back to home.
  * - Integrates navigation links back to the /trips overview directory.
  *
@@ -18,6 +18,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../pages/Layout/Layout';
+import api from '../services/api';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(''); // email local display
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
@@ -38,6 +39,7 @@ export default function ProfilePage() {
   const [cameraActive, setCameraActive] = useState(false);
 
   // Password Update States
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordMessage, setPasswordMessage] = useState('');
@@ -45,29 +47,33 @@ export default function ProfilePage() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('globe_user');
-    const storedTrips = localStorage.getItem('globe_trips');
+    // Fetch profile details from database
+    api.get('/users/me')
+      .then(profile => {
+        setUser(profile);
+        setFirstName(profile.first_name || '');
+        setLastName(profile.last_name || '');
+        setUsername(profile.first_name ? `${profile.first_name} ${profile.last_name}` : profile.email.split('@')[0]);
+        setEmail(profile.email || '');
+        setPhone(profile.phone || '');
+        setCity(profile.city || '');
+        setCountry(profile.country || '');
+        setAdditionalInfo(profile.bio || '');
+        setPhotoPreview(profile.avatar_url || '');
+      })
+      .catch(err => {
+        console.error('Failed to fetch user profile:', err);
+        router.push('/');
+      });
 
-    if (!storedUser) {
-      router.push('/');
-    } else {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      
-      // Initialize edit fields
-      setFirstName(parsedUser.firstName || '');
-      setLastName(parsedUser.lastName || '');
-      setUsername(parsedUser.username || '');
-      setEmail(parsedUser.email || '');
-      setPhone(parsedUser.phone || '');
-      setCity(parsedUser.city || '');
-      setCountry(parsedUser.country || '');
-      setAdditionalInfo(parsedUser.additionalInfo || '');
-      setPhotoPreview(parsedUser.photo || '');
-
-      const tripsArray = JSON.parse(storedTrips || '[]');
-      setTripsCount(tripsArray.length);
-    }
+    // Fetch user trip stats count
+    api.get('/users/me/stats')
+      .then(stats => {
+        setTripsCount(stats.total_trips || 0);
+      })
+      .catch(err => {
+        console.error('Failed to fetch stats:', err);
+      });
   }, []);
 
   const handleFileChange = (e) => {
@@ -89,47 +95,56 @@ export default function ProfilePage() {
     }, 1500);
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!username || !email) return;
+    try {
+      setPasswordMessage('');
 
-    // Password validation if input is filled
-    let passwordToSave = user.password;
-    if (newPassword) {
-      if (newPassword !== confirmNewPassword) {
-        setPasswordMessage("Passwords do not match.");
-        return;
+      // 1. Submit Profile fields updates
+      const updatedProfile = await api.patch('/users/me', {
+        first_name: firstName,
+        last_name: lastName,
+        bio: additionalInfo,
+        phone: phone,
+        city: city,
+        country: country
+      });
+
+      // 2. Handle Password change if requested
+      if (newPassword) {
+        if (!currentPassword) {
+          setPasswordMessage("Current password is required to change password.");
+          return;
+        }
+        if (newPassword !== confirmNewPassword) {
+          setPasswordMessage("New passwords do not match.");
+          return;
+        }
+        await api.patch('/users/me/password', {
+          current_password: currentPassword,
+          new_password: newPassword
+        });
       }
-      passwordToSave = newPassword;
+
+      // Sync local profile updates
+      setUser(updatedProfile);
+      localStorage.setItem('globe_user', JSON.stringify(updatedProfile));
+      setIsEditing(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setPasswordMessage('');
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      setPasswordMessage(err.message || 'Failed to save changes.');
     }
-
-    const updatedUser = {
-      ...user,
-      firstName,
-      lastName,
-      username,
-      email,
-      phone,
-      city,
-      country,
-      additionalInfo,
-      photo: photoPreview,
-      password: passwordToSave
-    };
-
-    localStorage.setItem('globe_user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-    setIsEditing(false);
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setPasswordMessage('');
   };
 
   if (!user) {
     return (
       <Layout>
         <div className="w-full min-h-screen bg-white flex items-center justify-center">
-          <p className="text-zinc-500 font-sans text-sm">Verifying session details...</p>
+          <p className="text-zinc-500 font-sans text-sm">Loading profile details...</p>
         </div>
       </Layout>
     );
@@ -210,7 +225,7 @@ export default function ProfilePage() {
                   {firstName && lastName ? `${firstName} ${lastName}` : username}
                 </h1>
                 <p className="text-zinc-400 text-xs sm:text-sm font-medium">
-                  @{username}
+                  {email}
                 </p>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-1">
                   <span className="bg-sky-50 text-sky-700 text-[10px] font-bold px-2.5 py-1 rounded-full">
@@ -271,7 +286,7 @@ export default function ProfilePage() {
                   />
                 ) : (
                   <span className="text-sm font-semibold text-zinc-800 font-sans">
-                    {user.firstName || 'Not specified'}
+                    {user.first_name || 'Not specified'}
                   </span>
                 )}
               </div>
@@ -289,26 +304,7 @@ export default function ProfilePage() {
                   />
                 ) : (
                   <span className="text-sm font-semibold text-zinc-800 font-sans">
-                    {user.lastName || 'Not specified'}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider font-sans">
-                  Username
-                </span>
-                {isEditing ? (
-                  <input 
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-transparent text-zinc-800 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm mt-1"
-                  />
-                ) : (
-                  <span className="text-sm font-semibold text-zinc-800 font-sans">
-                    {user.username || 'Not specified'}
+                    {user.last_name || 'Not specified'}
                   </span>
                 )}
               </div>
@@ -317,19 +313,9 @@ export default function ProfilePage() {
                 <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider font-sans">
                   Email Address
                 </span>
-                {isEditing ? (
-                  <input 
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-transparent text-zinc-800 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm mt-1"
-                  />
-                ) : (
-                  <span className="text-sm font-semibold text-zinc-800 font-sans">
-                    {user.email || 'Not specified'}
-                  </span>
-                )}
+                <span className="text-sm font-semibold text-zinc-600 font-sans mt-2">
+                  {user.email}
+                </span>
               </div>
 
               <div className="flex flex-col gap-1">
@@ -399,7 +385,7 @@ export default function ProfilePage() {
                   />
                 ) : (
                   <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed font-sans whitespace-pre-line mt-1">
-                    {user.additionalInfo || 'No bio or additional details provided.'}
+                    {user.bio || 'No bio or additional details provided.'}
                   </p>
                 )}
               </div>
@@ -412,19 +398,32 @@ export default function ProfilePage() {
                   </h3>
                   
                   {passwordMessage && (
-                    <p className="text-xs font-semibold text-sky-600 bg-sky-50 py-2 px-3 rounded-lg border border-sky-100">
+                    <p className="text-xs font-semibold text-sky-700 bg-sky-50 py-2 px-3 rounded-lg border border-sky-100">
                       {passwordMessage}
                     </p>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider font-sans">
+                        Current Password
+                      </span>
+                      <input 
+                        type="password"
+                        placeholder="Current password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="w-full bg-transparent text-zinc-800 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm mt-1"
+                      />
+                    </div>
+
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider font-sans">
                         New Password
                       </span>
                       <input 
                         type="password"
-                        placeholder="Leave blank to keep current"
+                        placeholder="New password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="w-full bg-transparent text-zinc-800 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm mt-1"
@@ -437,7 +436,7 @@ export default function ProfilePage() {
                       </span>
                       <input 
                         type="password"
-                        placeholder="Leave blank to keep current"
+                        placeholder="Confirm password"
                         value={confirmNewPassword}
                         onChange={(e) => setConfirmNewPassword(e.target.value)}
                         className="w-full bg-transparent text-zinc-800 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm mt-1"

@@ -2,34 +2,32 @@
  * AuthModal Component
  *
  * Purpose:
- * Handles user authentication (Login, Register, and Forgot Password) when booking actions are initiated.
+ * Handles user authentication (Login, Register, and Forgot Password) by integrating directly with NestJS backend APIs.
  *
  * Responsibility:
- * - Switches dynamically between Login, Register, and Forgot Password views.
- * - Formats forms matching the exact login/register input grids in the wireframes.
- * - Implements a photo upload utility with two options: "Upload from Files" and "Take Photo using Camera".
- * - Implements mock password resets and local storage updates.
- *
- * Why this file exists:
- * Restricts unauthenticated access to scheduling dashboards, enclosing user data capture.
+ * - Sends credentials to /auth/login and stores session tokens locally.
+ * - Submits user details to /auth/register to register new travel planner profiles.
+ * - Triggers recovery requests to /auth/forgot-password.
+ * - Handles errors and alerts natively inside the modal container.
  *
  * Used by:
  * - pages/index.js
  */
 
 import React, { useState, useRef } from 'react';
+import api from '../services/api';
 
 const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   const [mode, setMode] = useState('login'); // 'login' | 'register' | 'forgot'
   
   // Login Form States
-  const [loginUsername, setLoginUsername] = useState('');
+  const [loginUsername, setLoginUsername] = useState(''); // Email Address
   const [loginPassword, setLoginPassword] = useState('');
   
   // Register Form States
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [regUsername, setRegUsername] = useState('');
+  const [regUsername, setRegUsername] = useState(''); // Custom username (local display preference)
   const [regPassword, setRegPassword] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -39,8 +37,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   
   // Forgot Password States
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotPassword, setForgotPassword] = useState('');
-  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
   const [resetMessage, setResetMessage] = useState('');
 
   // Profile Photo states
@@ -70,69 +66,73 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
     }, 1500);
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!loginUsername || !loginPassword) return;
     
-    if (onAuthSuccess) {
-      onAuthSuccess({ 
-        username: loginUsername, 
-        photo: photoPreview,
+    try {
+      setResetMessage('');
+      const data = await api.post('/auth/login', {
+        email: loginUsername,
         password: loginPassword
       });
-    }
-    onClose();
-  };
 
-  const handleRegisterSubmit = (e) => {
-    e.preventDefault();
-    if (!firstName || !lastName || !regUsername || !regPassword || !email || !phone) return;
+      // Persist access tokens and profile payload
+      localStorage.setItem('globe_access_token', data.access_token);
+      localStorage.setItem('globe_refresh_token', data.refresh_token);
+      localStorage.setItem('globe_user', JSON.stringify(data.user));
 
-    if (onAuthSuccess) {
-      onAuthSuccess({
-        username: regUsername,
-        password: regPassword,
-        firstName,
-        lastName,
-        photo: photoPreview || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
-        email,
-        phone,
-        city,
-        country,
-        additionalInfo
-      });
-    }
-    onClose();
-  };
-
-  const handleForgotSubmit = (e) => {
-    e.preventDefault();
-    if (!forgotEmail || !forgotPassword || !forgotConfirmPassword) return;
-    if (forgotPassword !== forgotConfirmPassword) {
-      setResetMessage("Passwords do not match.");
-      return;
-    }
-
-    // Mock reset: update password in localStorage globe_user if email matches
-    const storedUser = localStorage.getItem('globe_user');
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      if (parsedUser.email === forgotEmail) {
-        parsedUser.password = forgotPassword;
-        localStorage.setItem('globe_user', JSON.stringify(parsedUser));
-        setResetMessage("Password reset successfully. Please log in.");
-        setTimeout(() => {
-          setMode('login');
-          setResetMessage('');
-        }, 1500);
-        return;
+      if (onAuthSuccess) {
+        onAuthSuccess(data.user);
       }
+      onClose();
+    } catch (err) {
+      setResetMessage(err.message || 'Login failed. Please verify your email and password.');
     }
-    setResetMessage("Password reset simulated successfully.");
-    setTimeout(() => {
-      setMode('login');
+  };
+
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+    if (!firstName || !lastName || !regPassword || !email || !phone) return;
+
+    try {
       setResetMessage('');
-    }, 1500);
+      const data = await api.post('/auth/register', {
+        email: email,
+        password: regPassword,
+        first_name: firstName,
+        last_name: lastName,
+        bio: additionalInfo,
+        phone: phone,
+        city: city,
+        country: country
+      });
+
+      // Persist access tokens and profile payload
+      localStorage.setItem('globe_access_token', data.access_token);
+      localStorage.setItem('globe_refresh_token', data.refresh_token);
+      localStorage.setItem('globe_user', JSON.stringify(data.user));
+
+      if (onAuthSuccess) {
+        onAuthSuccess(data.user);
+      }
+      onClose();
+    } catch (err) {
+      setResetMessage(err.message || 'Registration failed. Password must match standard rules.');
+    }
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) return;
+
+    try {
+      setResetMessage('');
+      await api.post('/auth/forgot-password', { email: forgotEmail });
+      setResetMessage("Password reset request sent. Check your inbox for reset token.");
+    } catch (err) {
+      setResetMessage(err.message || 'Failed to send recovery email.');
+    }
   };
 
   return (
@@ -154,7 +154,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
 
         {/* Dynamic Headers */}
         <div className="text-center">
-          <h2 className="text-xl sm:text-2xl font-serif font-normal text-zinc-900">
+          <h2 className="text-xl sm:text-2xl font-serif font-normal text-zinc-950">
             {mode === 'login' && 'Login to continue'}
             {mode === 'register' && 'Create an Account'}
             {mode === 'forgot' && 'Reset Password'}
@@ -162,40 +162,26 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
             {mode === 'login' && 'Please log in to plan a new trip.'}
             {mode === 'register' && 'Register to plan and organize your itineraries.'}
-            {mode === 'forgot' && 'Provide your details to reset your password.'}
+            {mode === 'forgot' && 'Provide your email details to retrieve your account.'}
           </p>
         </div>
+
+        {/* Error/Status Alerts */}
+        {resetMessage && (
+          <p className="text-xs text-center font-semibold text-sky-700 bg-sky-50 py-2.5 px-3 rounded-xl border border-sky-100 animate-in fade-in">
+            {resetMessage}
+          </p>
+        )}
 
         {/* FORGOT PASSWORD FORM */}
         {mode === 'forgot' && (
           <form onSubmit={handleForgotSubmit} className="flex flex-col gap-5">
-            {resetMessage && (
-              <p className="text-xs text-center font-semibold text-sky-600 bg-sky-50 py-2 rounded-lg border border-sky-100 animate-in fade-in">
-                {resetMessage}
-              </p>
-            )}
             <input
               type="email"
               required
               placeholder="Email Address"
               value={forgotEmail}
               onChange={(e) => setForgotEmail(e.target.value)}
-              className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
-            />
-            <input
-              type="password"
-              required
-              placeholder="New Password"
-              value={forgotPassword}
-              onChange={(e) => setForgotPassword(e.target.value)}
-              className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
-            />
-            <input
-              type="password"
-              required
-              placeholder="Confirm New Password"
-              value={forgotConfirmPassword}
-              onChange={(e) => setForgotConfirmPassword(e.target.value)}
               className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
             />
             <button
@@ -207,7 +193,10 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             <p className="text-center text-xs text-zinc-500">
               <button
                 type="button"
-                onClick={() => setMode('login')}
+                onClick={() => {
+                  setMode('login');
+                  setResetMessage('');
+                }}
                 className="text-sky-600 hover:text-sky-700 font-semibold cursor-pointer underline"
               >
                 Back to Login
@@ -230,11 +219,11 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
             </div>
 
             <input
-              type="text"
+              type="email"
               required
               value={loginUsername}
               onChange={(e) => setLoginUsername(e.target.value)}
-              placeholder="Username"
+              placeholder="Email Address"
               className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
             />
 
@@ -250,7 +239,10 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
               <div className="text-right">
                 <button
                   type="button"
-                  onClick={() => setMode('forgot')}
+                  onClick={() => {
+                    setMode('forgot');
+                    setResetMessage('');
+                  }}
                   className="text-[11px] text-sky-600 hover:text-sky-700 font-semibold cursor-pointer underline"
                 >
                   Forgot Password?
@@ -269,7 +261,10 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
               Don't have an account?{' '}
               <button
                 type="button"
-                onClick={() => setMode('register')}
+                onClick={() => {
+                  setMode('register');
+                  setResetMessage('');
+                }}
                 className="text-sky-600 hover:text-sky-700 font-semibold cursor-pointer underline"
               >
                 Register
@@ -404,7 +399,10 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
               Already have an account?{' '}
               <button
                 type="button"
-                onClick={() => setMode('login')}
+                onClick={() => {
+                  setMode('login');
+                  setResetMessage('');
+                }}
                 className="text-sky-600 hover:text-sky-700 font-semibold cursor-pointer underline"
               >
                 Login

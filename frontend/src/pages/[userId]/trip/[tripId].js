@@ -2,17 +2,15 @@
  * Dynamic Trip Details Page Component (Itinerary View - Screen 9)
  *
  * Purpose:
- * Renders the detailed itinerary timeline for a specific trip, structured by days with activity and expense columns.
+ * Renders the detailed itinerary timeline for a specific trip, structured by days with activity and expense columns,
+ * loading data from NestJS backend APIs.
  *
  * Responsibility:
  * - Reads dynamic routing query values (userId and tripId) using Next.js useRouter.
- * - Queries the local storage trips database to locate the matching itinerary details.
+ * - Queries the NestJS database (GET /trips/:tripId/full) to retrieve the full itinerary details.
  * - Groups itinerary sections dynamically by day compared to the trip start date.
  * - Displays the Day-by-Day timeline flow where activities are connected by downward arrows.
  * - Displays parallel Expense slots next to each Activity card matching the wireframe.
- *
- * Why this file exists:
- * Dynamically serves context-specific itineraries under structured user routing slots.
  *
  * Used by:
  * - Next.js Router (/[userId]/trip/[tripId])
@@ -22,6 +20,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../../../pages/Layout/Layout';
 import SearchControlBar from '../../../components/SearchControlBar';
+import api from '../../../services/api';
 
 export default function TripDetailsPage() {
   const router = useRouter();
@@ -31,17 +30,18 @@ export default function TripDetailsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (!router.isReady) return;
+    if (!router.isReady || !tripId) return;
 
-    const storedTrips = localStorage.getItem('globe_trips');
-    if (storedTrips) {
-      const tripsArray = JSON.parse(storedTrips);
-      const foundTrip = tripsArray.find(
-        (t) => t.userId === userId && t.tripId === tripId
-      );
-      setTrip(foundTrip || null);
-    }
-    setLoading(false);
+    // Fetch the full trip details including stops and sections from NestJS
+    api.get(`/trips/${tripId}/full`)
+      .then(data => {
+        setTrip(data || null);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch full trip details:', err);
+        setLoading(false);
+      });
   }, [router.isReady, userId, tripId]);
 
   if (loading) {
@@ -60,7 +60,7 @@ export default function TripDetailsPage() {
         <div className="w-full min-h-screen bg-white flex flex-col items-center justify-center gap-4">
           <h2 className="text-2xl font-serif text-zinc-800">Itinerary Not Found</h2>
           <p className="text-sm text-zinc-400 font-sans">
-            The requested travel details could not be located.
+            The requested travel details could not be located on the server.
           </p>
           <button
             onClick={() => router.push('/trips')}
@@ -79,23 +79,22 @@ export default function TripDetailsPage() {
     
     // Sort sections by date
     const sorted = [...trip.sections].sort((a, b) => {
-      if (!a.startDate) return 1;
-      if (!b.startDate) return -1;
-      return new Date(a.startDate) - new Date(b.startDate);
+      if (!a.start_date) return 1;
+      if (!b.start_date) return -1;
+      return new Date(a.start_date) - new Date(b.start_date);
     });
 
-    const tripStart = new Date(trip.startDate);
+    const tripStart = new Date(trip.start_date);
     const groups = {};
 
     sorted.forEach((sec, idx) => {
       let dayName = 'Day 1';
-      if (sec.startDate) {
-        const secDate = new Date(sec.startDate);
+      if (sec.start_date) {
+        const secDate = new Date(sec.start_date);
         const diffTime = Math.abs(secDate - tripStart);
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         dayName = `Day ${isNaN(diffDays) ? 1 : diffDays}`;
       } else {
-        // Fallback to sequential grouping if dates are missing
         dayName = `Day ${Math.floor(idx / 3) + 1}`;
       }
 
@@ -111,7 +110,19 @@ export default function TripDetailsPage() {
   // Filtered entries helper based on search query
   const matchesQuery = (text) => {
     if (!searchQuery) return true;
-    return text.toLowerCase().includes(searchQuery.toLowerCase());
+    return (text || '').toLowerCase().includes(searchQuery.toLowerCase());
+  };
+
+  // Calculate total budget of the trip
+  const calculateTotalBudget = () => {
+    if (!trip.sections) return 'INR 0';
+    let total = 0;
+    trip.sections.forEach(sec => {
+      if (sec.planned_budget) {
+        total += parseFloat(sec.planned_budget);
+      }
+    });
+    return total > 0 ? `${trip.currency || 'INR'} ${total}` : 'Unspecified';
   };
 
   return (
@@ -133,13 +144,25 @@ export default function TripDetailsPage() {
           </div>
 
           {/* Page Heading */}
-          <div className="text-center my-2">
-            <h1 className="text-2xl sm:text-3xl font-serif font-normal text-zinc-950">
-              Itinerary for {trip.tripName}
-            </h1>
-            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-              📍 Destination: {trip.place} | Date Range: {trip.startDate} to {trip.endDate}
-            </p>
+          <div className="text-center my-2 flex flex-col sm:flex-row justify-between items-center gap-6">
+            <div className="text-left">
+              <h1 className="text-2xl sm:text-3xl font-serif font-normal text-zinc-950">
+                Itinerary for {trip.title}
+              </h1>
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+                📍 Destination: {trip.description || 'Global'} | Date Range: {trip.start_date ? trip.start_date.split('T')[0] : ''} to {trip.end_date ? trip.end_date.split('T')[0] : ''}
+              </p>
+            </div>
+
+            {/* Total Budget Badge */}
+            <div className="bg-sky-50 border border-sky-100 rounded-2xl p-4 sm:p-5 flex flex-col gap-1 items-start sm:items-end shrink-0">
+              <span className="text-[10px] text-sky-700 font-bold uppercase tracking-wider">
+                Total Budget
+              </span>
+              <span className="text-xl sm:text-2xl font-bold text-sky-900 font-sans">
+                {calculateTotalBudget()}
+              </span>
+            </div>
           </div>
 
           {/* Search bar controls at top */}
@@ -183,9 +206,9 @@ export default function TripDetailsPage() {
                             <p className="text-zinc-500 text-xs leading-relaxed max-w-3xl">
                               {sec.description}
                             </p>
-                            {sec.startDate && (
+                            {sec.start_date && (
                               <span className="text-[10px] text-zinc-400 font-semibold mt-1">
-                                ⏱ Time: {sec.startDate} to {sec.endDate}
+                                ⏱ Time: {sec.start_date.split('T')[0]} to {sec.end_date.split('T')[0]}
                               </span>
                             )}
                           </div>
@@ -196,7 +219,7 @@ export default function TripDetailsPage() {
                               Cost
                             </span>
                             <span className="text-xs sm:text-sm font-bold text-zinc-800 font-sans">
-                              {sec.budget || '$0'}
+                              {trip.currency || 'INR'} {sec.planned_budget ? parseFloat(sec.planned_budget) : 0}
                             </span>
                           </div>
                         </div>

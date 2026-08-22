@@ -24,6 +24,7 @@ import PreviousTripsSection from "../components/PreviousTripsSection";
 import PlanTripModal from "../components/PlanTripModal";
 import TripSectionsModal from "../components/TripSectionsModal";
 import AuthModal from "../components/AuthModal";
+import api from "../services/api";
 
 export default function Home() {
   const router = useRouter();
@@ -56,24 +57,56 @@ export default function Home() {
   };
 
   const handleAuthSuccess = (user) => {
-    console.log('User logged in/registered successfully:', user);
-    localStorage.setItem('globe_user', JSON.stringify(user));
+    console.log('User logged in successfully:', user);
     setIsLoggedIn(true);
-    setIsModalOpen(true); // Continue directly to plan trip after login
+    setIsModalOpen(true);
   };
 
-  const handleSaveItinerary = (fullTripData) => {
-    console.log('Saving trip itinerary details:', fullTripData);
+  const handleSaveItinerary = async (fullTripData) => {
+    console.log('Saving trip itinerary details to backend:', fullTripData);
     
-    // Retrieve existing trips list, append new one, and persist in local storage
-    const existingTrips = JSON.parse(localStorage.getItem('globe_trips') || '[]');
-    const updatedTrips = [...existingTrips, fullTripData];
-    localStorage.setItem('globe_trips', JSON.stringify(updatedTrips));
-    
-    setIsSectionsModalOpen(false);
-    
-    // Redirect directly to the trips list page to view all itineraries
-    router.push('/trips');
+    try {
+      // 1. Create the parent trip in NestJS backend
+      const tripPayload = {
+        title: fullTripData.tripName,
+        description: fullTripData.place,
+        start_date: fullTripData.startDate, 
+        end_date: fullTripData.endDate, 
+        budget_limit: parseFloat(fullTripData.budget.replace(/[^0-9.]/g, '')) || 0,
+        currency: 'INR',
+        status: 'PLANNED'
+      };
+
+      const trip = await api.post('/trips', tripPayload);
+
+      // 2. Create each itinerary section sequentially
+      if (fullTripData.sections && fullTripData.sections.length > 0) {
+        for (let i = 0; i < fullTripData.sections.length; i++) {
+          const sec = fullTripData.sections[i];
+          const sectionPayload = {
+            title: sec.title,
+            description: sec.description || '',
+            section_type: 'CUSTOM',
+            start_date: sec.startDate || fullTripData.startDate,
+            end_date: sec.endDate || fullTripData.endDate,
+            planned_budget: parseFloat(sec.budget.replace(/[^0-9.]/g, '')) || 0,
+            section_order: i + 1
+          };
+          await api.post(`/trips/${trip.id}/sections`, sectionPayload);
+        }
+      }
+
+      setIsSectionsModalOpen(false);
+
+      // Get user id to dynamic redirect to specific trip page
+      const userStr = localStorage.getItem('globe_user');
+      const user = JSON.parse(userStr || '{}');
+      const userId = user.id || 'me';
+      router.push(`/${userId}/trip/${trip.id}`);
+    } catch (err) {
+      console.error('Failed to save itinerary to backend:', err);
+      alert(err.message || 'Failed to save itinerary.');
+    }
   };
 
   return (
