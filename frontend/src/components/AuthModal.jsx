@@ -2,14 +2,13 @@
  * AuthModal Component
  *
  * Purpose:
- * Handles user authentication (Login and Register) when booking or planning actions are initiated.
+ * Handles user authentication (Login, Register, and Forgot Password) when booking actions are initiated.
  *
  * Responsibility:
- * - Switches dynamically between Login and Register views.
+ * - Switches dynamically between Login, Register, and Forgot Password views.
  * - Formats forms matching the exact login/register input grids in the wireframes.
  * - Implements a photo upload utility with two options: "Upload from Files" and "Take Photo using Camera".
- * - Integrates native files explorer triggers and handles mock webcam activation states.
- * - Automatically logs in user upon validation and forwards control flow to the planner dialog.
+ * - Implements mock password resets and local storage updates.
  *
  * Why this file exists:
  * Restricts unauthenticated access to scheduling dashboards, enclosing user data capture.
@@ -21,26 +20,33 @@
 import React, { useState, useRef } from 'react';
 
 const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
-
+  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'forgot'
+  
   // Login Form States
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-
+  
   // Register Form States
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [regUsername, setRegUsername] = useState('');
+  const [regPassword, setRegPassword] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
+  
+  // Forgot Password States
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotPassword, setForgotPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
 
   // Profile Photo states
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [showPhotoSourceOptions, setShowPhotoSourceOptions] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
-
+  
   const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
@@ -51,22 +57,13 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPhotoPreview(reader.result);
-        setShowPhotoSourceOptions(false);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const triggerFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
   const triggerCameraMode = () => {
     setCameraActive(true);
-    setShowPhotoSourceOptions(false);
-    // Simulating camera snapshot after 1.5 seconds
     setTimeout(() => {
       setPhotoPreview("https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80");
       setCameraActive(false);
@@ -76,26 +73,66 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
   const handleLoginSubmit = (e) => {
     e.preventDefault();
     if (!loginUsername || !loginPassword) return;
-
-    // Trigger success callback
+    
     if (onAuthSuccess) {
-      onAuthSuccess({ username: loginUsername, photo: photoPreview });
+      onAuthSuccess({ 
+        username: loginUsername, 
+        photo: photoPreview,
+        password: loginPassword
+      });
     }
     onClose();
   };
 
   const handleRegisterSubmit = (e) => {
     e.preventDefault();
-    if (!firstName || !lastName || !email || !phone) return;
+    if (!firstName || !lastName || !regUsername || !regPassword || !email || !phone) return;
 
     if (onAuthSuccess) {
       onAuthSuccess({
-        username: `${firstName} ${lastName}`,
+        username: regUsername,
+        password: regPassword,
+        firstName,
+        lastName,
         photo: photoPreview || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80",
-        email
+        email,
+        phone,
+        city,
+        country,
+        additionalInfo
       });
     }
     onClose();
+  };
+
+  const handleForgotSubmit = (e) => {
+    e.preventDefault();
+    if (!forgotEmail || !forgotPassword || !forgotConfirmPassword) return;
+    if (forgotPassword !== forgotConfirmPassword) {
+      setResetMessage("Passwords do not match.");
+      return;
+    }
+
+    // Mock reset: update password in localStorage globe_user if email matches
+    const storedUser = localStorage.getItem('globe_user');
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      if (parsedUser.email === forgotEmail) {
+        parsedUser.password = forgotPassword;
+        localStorage.setItem('globe_user', JSON.stringify(parsedUser));
+        setResetMessage("Password reset successfully. Please log in.");
+        setTimeout(() => {
+          setMode('login');
+          setResetMessage('');
+        }, 1500);
+        return;
+      }
+    }
+    setResetMessage("Password reset simulated successfully.");
+    setTimeout(() => {
+      setMode('login');
+      setResetMessage('');
+    }, 1500);
   };
 
   return (
@@ -105,7 +142,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
 
       {/* Modal Container */}
       <div className="relative w-full max-w-lg bg-white rounded-3xl border border-zinc-200 shadow-2xl p-6 sm:p-8 flex flex-col gap-6 z-10 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto scrollbar-none">
-
+        
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -118,18 +155,70 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
         {/* Dynamic Headers */}
         <div className="text-center">
           <h2 className="text-xl sm:text-2xl font-serif font-normal text-zinc-900">
-            {mode === 'login' ? 'Login to continue' : 'Create an Account'}
+            {mode === 'login' && 'Login to continue'}
+            {mode === 'register' && 'Create an Account'}
+            {mode === 'forgot' && 'Reset Password'}
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            {mode === 'login' ? 'Please log in to plan a new trip.' : 'Register to plan and organize your itineraries.'}
+            {mode === 'login' && 'Please log in to plan a new trip.'}
+            {mode === 'register' && 'Register to plan and organize your itineraries.'}
+            {mode === 'forgot' && 'Provide your details to reset your password.'}
           </p>
         </div>
 
-        {/* Dynamic Forms Container */}
-        {mode === 'login' ? (
-          /* LOGIN FORM (Matches Wireframe 1) */
+        {/* FORGOT PASSWORD FORM */}
+        {mode === 'forgot' && (
+          <form onSubmit={handleForgotSubmit} className="flex flex-col gap-5">
+            {resetMessage && (
+              <p className="text-xs text-center font-semibold text-sky-600 bg-sky-50 py-2 rounded-lg border border-sky-100 animate-in fade-in">
+                {resetMessage}
+              </p>
+            )}
+            <input
+              type="email"
+              required
+              placeholder="Email Address"
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
+            />
+            <input
+              type="password"
+              required
+              placeholder="New Password"
+              value={forgotPassword}
+              onChange={(e) => setForgotPassword(e.target.value)}
+              className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
+            />
+            <input
+              type="password"
+              required
+              placeholder="Confirm New Password"
+              value={forgotConfirmPassword}
+              onChange={(e) => setForgotConfirmPassword(e.target.value)}
+              className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
+            />
+            <button
+              type="submit"
+              className="w-full bg-sky-600 hover:bg-sky-500 text-white rounded-xl py-2.5 font-sans font-semibold transition-all active:scale-98 cursor-pointer text-sm shadow-md"
+            >
+              Reset Password
+            </button>
+            <p className="text-center text-xs text-zinc-500">
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="text-sky-600 hover:text-sky-700 font-semibold cursor-pointer underline"
+              >
+                Back to Login
+              </button>
+            </p>
+          </form>
+        )}
+
+        {/* LOGIN FORM */}
+        {mode === 'login' && (
           <form onSubmit={handleLoginSubmit} className="flex flex-col gap-5">
-            {/* Photo Avatar circle (Static in login, or shows selected user preview) */}
             <div className="flex justify-center">
               <div className="w-20 h-20 rounded-full border border-zinc-200 bg-zinc-50 flex items-center justify-center text-zinc-400 font-sans text-xs font-semibold overflow-hidden shadow-inner">
                 {photoPreview ? (
@@ -140,20 +229,16 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
               </div>
             </div>
 
-            {/* Username Input */}
-            <div className="flex flex-col gap-1.5">
-              <input
-                type="text"
-                required
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-                placeholder="Username"
-                className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
-              />
-            </div>
+            <input
+              type="text"
+              required
+              value={loginUsername}
+              onChange={(e) => setLoginUsername(e.target.value)}
+              placeholder="Username"
+              className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
+            />
 
-            {/* Password Input */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <input
                 type="password"
                 required
@@ -162,9 +247,17 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                 placeholder="Password"
                 className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-sm"
               />
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setMode('forgot')}
+                  className="text-[11px] text-sky-600 hover:text-sky-700 font-semibold cursor-pointer underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               className="w-full bg-sky-600 hover:bg-sky-500 text-white rounded-xl py-2.5 font-sans font-semibold transition-all active:scale-98 cursor-pointer text-sm shadow-md"
@@ -172,7 +265,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
               Login
             </button>
 
-            {/* Toggle Link */}
             <p className="text-center text-xs text-zinc-500 mt-2">
               Don't have an account?{' '}
               <button
@@ -184,11 +276,11 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
               </button>
             </p>
           </form>
-        ) : (
-          /* REGISTER FORM (Matches Wireframe 2) */
-          <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-5">
+        )}
 
-            {/* Photo Avatar upload section */}
+        {/* REGISTER FORM */}
+        {mode === 'register' && (
+          <form onSubmit={handleRegisterSubmit} className="flex flex-col gap-5">
             <div className="flex flex-col items-center gap-4">
               <div className="w-20 h-20 rounded-full border border-zinc-200 bg-zinc-50 flex items-center justify-center text-zinc-400 font-sans text-xs font-semibold overflow-hidden shadow-inner relative">
                 {photoPreview ? (
@@ -203,37 +295,31 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                 )}
               </div>
 
-              {/* Styled Photo Action Selection Cards */}
-              <div className="flex gap-3 w-full">
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={triggerFileInput}
-                  className="flex-1 border border-zinc-200 hover:border-sky-500 rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all bg-zinc-50/50 hover:bg-white text-zinc-700 hover:text-sky-600 focus:outline-none"
+                  onClick={() => fileInputRef.current.click()}
+                  className="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-700 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
                 >
-                  <span className="text-xl">📁</span>
-                  <span className="text-xs font-bold font-sans">Choose File</span>
+                  Choose File
                 </button>
                 <button
                   type="button"
                   onClick={triggerCameraMode}
-                  className="flex-1 border border-zinc-200 hover:border-sky-500 rounded-xl p-3 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all bg-zinc-50/50 hover:bg-white text-zinc-700 hover:text-sky-600 focus:outline-none"
+                  className="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-700 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
                 >
-                  <span className="text-xl">📸</span>
-                  <span className="text-xs font-bold font-sans">Click Photo Now</span>
+                  Click Photo Now
                 </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
               </div>
-
-              {/* Hidden file input element */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                className="hidden"
-              />
             </div>
 
-            {/* Grid Fields (First Name, Last Name, Email, Phone, City, Country) */}
             <div className="grid grid-cols-2 gap-4">
               <input
                 type="text"
@@ -250,6 +336,22 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-xs sm:text-sm"
+              />
+              <input
+                type="text"
+                required
+                placeholder="Username"
+                value={regUsername}
+                onChange={(e) => setRegUsername(e.target.value)}
+                className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2 col-span-2 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-xs sm:text-sm"
+              />
+              <input
+                type="password"
+                required
+                placeholder="Password"
+                value={regPassword}
+                onChange={(e) => setRegPassword(e.target.value)}
+                className="w-full bg-transparent text-zinc-900 border border-zinc-200 rounded-xl px-4 py-2 col-span-2 outline-none focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-xs sm:text-sm"
               />
               <input
                 type="email"
@@ -283,7 +385,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
               />
             </div>
 
-            {/* Additional Information textarea */}
             <textarea
               placeholder="Additional Information ...."
               value={additionalInfo}
@@ -292,7 +393,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
               className="w-full bg-zinc-50/50 text-zinc-900 border border-zinc-200 rounded-xl px-4 py-3 outline-none focus:bg-white focus:border-sky-600 focus:ring-4 focus:ring-sky-600/10 transition-all font-sans text-xs resize-none"
             />
 
-            {/* Submit Button */}
             <button
               type="submit"
               className="w-full bg-sky-600 hover:bg-sky-500 text-white rounded-xl py-2.5 font-sans font-semibold transition-all active:scale-98 cursor-pointer text-sm shadow-md"
@@ -300,7 +400,6 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
               Register Users
             </button>
 
-            {/* Toggle Link */}
             <p className="text-center text-xs text-zinc-500 mt-2">
               Already have an account?{' '}
               <button
