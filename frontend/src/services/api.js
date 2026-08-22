@@ -46,7 +46,11 @@ async function request(path, options = {}) {
     
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.message || `API error: ${response.status}`);
+      // Backend returns { success: false, error: { code, message, details? } }
+      const apiError = errData.error || errData;
+      const details = apiError.details;
+      const msg = Array.isArray(details) ? details.join('. ') : (apiError.message || errData.message || `API error: ${response.status}`);
+      throw new Error(msg);
     }
     
     if (response.status === 204) return null;
