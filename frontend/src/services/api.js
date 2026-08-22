@@ -34,20 +34,29 @@ async function request(path, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers
-  });
+  // Normalise path and construct full target URL
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const fullUrl = cleanPath.startsWith('http') ? cleanPath : `${BASE_URL}${cleanPath}`;
   
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.message || `API error: ${response.status}`);
+  try {
+    const response = await fetch(fullUrl, {
+      ...options,
+      headers
+    });
+    
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData.message || `API error: ${response.status}`);
+    }
+    
+    if (response.status === 204) return null;
+    
+    const json = await response.json();
+    return json.data !== undefined ? json.data : json;
+  } catch (err) {
+    console.error(`[API Network Request Failed] ${options.method || 'GET'} ${fullUrl}:`, err.message);
+    throw err;
   }
-  
-  if (response.status === 204) return null;
-  
-  const json = await response.json();
-  return json.data !== undefined ? json.data : json;
 }
 
 export const api = {
@@ -57,4 +66,5 @@ export const api = {
   put: (path, body, options) => request(path, { method: 'PUT', body: JSON.stringify(body), ...options }),
   delete: (path, options) => request(path, { method: 'DELETE', ...options })
 };
+
 export default api;
