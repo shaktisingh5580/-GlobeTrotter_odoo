@@ -160,6 +160,32 @@ describe('ItineraryService (Phase 12: Daily Activity Schedule, Calendar & Timeli
     });
   });
 
+  describe('getItineraryItem', () => {
+    it('should return a single itinerary item by ID', async () => {
+      prisma.trip.findFirst.mockResolvedValue(sampleTrip);
+      prisma.itineraryItem.findFirst.mockResolvedValue(sampleItem);
+
+      const result = await service.getItineraryItem(
+        sampleTrip.id,
+        sampleItem.id,
+        mockUser,
+      );
+
+      expect(result.id).toBe(sampleItem.id);
+      expect(result.custom_title).toBeNull();
+      expect(result.activity?.name).toBe('Louvre Tour');
+    });
+
+    it('should throw NotFoundException (404) when item is not found', async () => {
+      prisma.trip.findFirst.mockResolvedValue(sampleTrip);
+      prisma.itineraryItem.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.getItineraryItem(sampleTrip.id, 'non-existent-item', mockUser),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('createItineraryItem', () => {
     it('should create an itinerary item when dates and ownership are valid', async () => {
       prisma.trip.findFirst.mockResolvedValue(sampleTrip);

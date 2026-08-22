@@ -75,6 +75,16 @@ export class ItineraryController {
     return this.itineraryService.reorderItineraryItems(tripId, dto, user);
   }
 
+  @Get('items/:itemId')
+  @HttpCode(HttpStatus.OK)
+  async getItineraryItem(
+    @Param('tripId', ParseUUIDPipe) tripId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ItineraryItemResponse> {
+    return this.itineraryService.getItineraryItem(tripId, itemId, user);
+  }
+
   @Patch('items/:itemId')
   @HttpCode(HttpStatus.OK)
   async updateItineraryItem(

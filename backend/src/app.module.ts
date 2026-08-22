@@ -21,6 +21,10 @@ import { StopsModule } from './features/stops/stops.module';
 import { SectionsModule } from './features/sections/sections.module';
 import { DestinationsModule } from './features/destinations/destinations.module';
 import { ItineraryModule } from './features/itinerary/itinerary.module';
+import { BudgetModule } from './features/budget/budget.module';
+import { SharingModule } from './features/sharing/sharing.module';
+import { CommunityModule } from './features/community/community.module';
+import { AdminModule } from './features/admin/admin.module';
 
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { RlsContextMiddleware } from './common/middleware/rls-context.middleware';
@@ -45,6 +49,10 @@ import { RolesGuard } from './common/guards/roles.guard';
     SectionsModule,
     DestinationsModule,
     ItineraryModule,
+    BudgetModule,
+    SharingModule,
+    CommunityModule,
+    AdminModule,
     JwtModule.registerAsync({
       global: true,
       imports: [AppConfigModule],
